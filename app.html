@@ -1781,8 +1781,8 @@
     <div id="authView" style="display: flex; justify-content: center; align-items: center; height: 100vh;">
         <div style="background: #ffffff; padding: 40px; border-radius: 20px; width: 400px; border: 1px solid #e5e7eb; text-align: center;">
     
-            <div style="margin-bottom: 25px;">
-                <svg width="130" height="50" viewBox="0 0 130 50" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: inline-block;">
+            <div style="margin-bottom: 25px; display: flex; justify-content: center;">
+                <svg width="130" height="50" viewBox="0 0 130 50" fill="none" xmlns="http://www.w3.org/2000/svg" style="display: block;">
                     <defs>
                         <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
                             <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1"></stop>
@@ -1812,7 +1812,7 @@
                 <input type="password" id="passwordInput" placeholder="Password" class="modal-input">
             </div>
     
-            <div style="text-align: right; margin-top: -15px; margin-bottom: 20px;">
+            <div style="text-align: center; margin-bottom: 20px;">
                 <button id="forgotPasswordBtn" class="forgot-password-button">Forgot your password?</button>
             </div>
     
@@ -1822,14 +1822,11 @@
                 <button id="loginBtn" class="modal-btn submit" style="width: 100%;">Login</button>
                 <button id="signupBtn" class="modal-btn submit" style="width: 100%; background: #e5e7eb; color: #374151;">Sign Up</button>
             </div>
-        
             <div style="margin: 20px 0; text-align: center; color: #71717a;">OR</div>
-        
             <button id="googleSignInBtn" class="modal-btn" style="width: 100%; background: #fff; color: #000; border: 1px solid #d1d5db; display: flex; align-items: center; justify-content: center; gap: 10px;">
                 <svg version="1.1" xmlns="http://www.w3.org/2000/svg" width="18px" height="18px" viewBox="0 0 48 48"><g><path fill="#EA4335" d="M24 9.5c3.54 0 6.71 1.22 9.21 3.6l6.85-6.85C35.9 2.38 30.47 0 24 0 14.62 0 6.51 5.38 2.56 13.22l7.98 6.19C12.43 13.72 17.74 9.5 24 9.5z"></path><path fill="#4285F4" d="M46.98 24.55c0-1.57-.15-3.09-.42-4.55H24v9.02h12.94c-.58 2.96-2.26 5.48-4.78 7.18l7.73 6c4.51-4.18 7.09-10.36 7.09-17.65z"></path><path fill="#FBBC05" d="M10.53 28.59c-.48-1.45-.76-2.99-.76-4.59s.27-3.14.76-4.59l-7.98-6.19C.92 16.46 0 20.12 0 24c0 3.88.92 7.54 2.56 10.78l7.97-6.19z"></path><path fill="#34A853" d="M24 48c6.48 0 11.93-2.13 15.89-5.81l-7.73-6c-2.15 1.45-4.92 2.3-8.16 2.3-6.26 0-11.57-4.22-13.47-9.91l-7.98 6.19C6.51 42.62 14.62 48 24 48z"></path><path fill="none" d="M0 0h48v48H0z"></path></g></svg>
                 Sign in with Google
             </button>
-    
         </div>
     </div>
     
@@ -5894,13 +5891,20 @@ Example Response:
 // --- Add this snippet for Forgot Password functionality ---
 
 // Get a reference to the new button
+// --- Add this snippet for Forgot Password functionality ---
+
+// Get a reference to the new button
 const forgotPasswordBtn = document.getElementById('forgotPasswordBtn');
 
 forgotPasswordBtn.addEventListener('click', () => {
     const email = emailInput.value;
-    const authError = document.getElementById('authError'); // The existing error message p tag
+    const authError = document.getElementById('authError');
+
+    // Clear previous messages immediately
+    authError.textContent = '';
 
     if (!email) {
+        authError.style.color = '#dc2626'; // Red for error
         authError.textContent = 'Please enter your email address first.';
         return;
     }
@@ -5909,13 +5913,24 @@ forgotPasswordBtn.addEventListener('click', () => {
     auth.sendPasswordResetEmail(email)
         .then(() => {
             // Success! Let the user know.
-            authError.style.color = '#16a34a'; // A nice green color for success
-            authError.textContent = 'Password reset email sent! Please check your inbox.';
+            authError.style.color = '#16a34a'; // Green for success
+            // CHANGE 3: Shortened confirmation message
+            authError.textContent = 'Password reset email sent.';
+
+            // CHANGE 4: Make the message disappear after 5 seconds
+            setTimeout(() => {
+                authError.textContent = '';
+            }, 5000);
         })
         .catch((error) => {
             // An error happened. Show the error message from Firebase.
-            authError.style.color = '#dc2626'; // The original red color for errors
+            authError.style.color = '#dc2626'; // Red for error
             authError.textContent = error.message;
+
+            // Also make error messages disappear after 5 seconds
+            setTimeout(() => {
+                authError.textContent = '';
+            }, 5000);
         });
 });
     </script>
