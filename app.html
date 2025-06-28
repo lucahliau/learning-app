@@ -6045,22 +6045,46 @@ document.getElementById('resendVerificationBtn').addEventListener('click', () =>
     }
 });
 
+// --- Replace the 'checkVerificationBtn' listener with this corrected version ---
+
 document.getElementById('checkVerificationBtn').addEventListener('click', () => {
     const user = auth.currentUser;
+    const resendMsg = document.getElementById('resendMessage');
+
+    // Give the user immediate feedback
+    resendMsg.style.color = '#4b5563'; // Use a neutral color for status
+    resendMsg.textContent = 'Checking verification status...';
+
     if (user) {
-        // Reload the user's data from Firebase to get the latest verification status
+        // Reload the user's data from Firebase to get the latest status
         user.reload().then(() => {
+            // The user object is now updated with the latest data from the server.
+            
             if (auth.currentUser.emailVerified) {
-                // If verified, hide the verify view and show the app
-                document.getElementById('verifyEmailView').style.display = 'none';
-                document.getElementById('appContainer').style.display = 'block';
-                loadTopicsFromFirestore(auth.currentUser.uid);
+                // SUCCESS: The user is now verified.
+                // The most reliable way to proceed is to refresh the page.
+                // This will cause onAuthStateChanged to run again, and since the
+                // user is now verified, it will grant them access correctly.
+                resendMsg.textContent = 'Success! Loading the app...';
+                location.reload();
+
             } else {
-                // If not, inform the user
-                const resendMsg = document.getElementById('resendMessage');
-                resendMsg.textContent = 'Email is still not verified. Please check your inbox/spam.';
-                setTimeout(() => { resendMsg.textContent = '' }, 5000);
+                // FAILURE: The user is still not verified.
+                resendMsg.style.color = '#dc2626'; // Red for error
+                resendMsg.textContent = 'Email is still not verified. Please click the link in your inbox.';
+                // Clear the message after a few seconds
+                setTimeout(() => {
+                    resendMsg.textContent = '';
+                }, 5000);
             }
+        }).catch(error => {
+            // This handles cases where the reload call itself fails (e.g., network issues)
+            resendMsg.style.color = '#dc2626';
+            resendMsg.textContent = 'Could not check status. Please try again.';
+            console.error('Error on user.reload():', error);
+            setTimeout(() => {
+                resendMsg.textContent = '';
+            }, 5000);
         });
     }
 });
