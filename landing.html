@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Curiosity</title>
+    
+    <!-- Google Fonts: Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    
+    <!-- Tailwind CSS for utility classes -->
+    <script src="https://cdn.tailwindcss.com"></script>
+
+    <style>
+        /* Custom CSS to enhance Tailwind and match the app's aesthetic */
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: #f9fafb; /* Light gray background from your app */
+            color: #374151; /* Default text color */
+        }
+
+        /* Gradient text for headlines */
+        .gradient-text {
+            background: linear-gradient(135deg, #6366f1, #8b5cf6);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        /* Custom styling for the main CTA button */
+        .cta-button {
+            transition: all 0.3s ease;
+            box-shadow: 0 4px 15px rgba(99, 102, 241, 0.2);
+        }
+
+        .cta-button:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 8px 25px rgba(99, 102, 241, 0.4);
+        }
+        
+        /* Styling for the video placeholder */
+        .video-placeholder {
+            border: 2px dashed #d1d5db;
+            background-color: #f3f4f6;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            text-align: center;
+            color: #6b7280;
+            aspect-ratio: 16 / 9;
+        }
+
+        /* Section-specific background */
+        .feature-section {
+            padding: 6rem 1.5rem;
+            overflow: hidden;
+        }
+
+        .feature-section:nth-child(odd) {
+            background-color: #ffffff;
+        }
+
+        /* Styling for the feature visual placeholders */
+        .feature-visual {
+            background-color: #f3f4f6;
+            border-radius: 1.5rem;
+            border: 1px solid #e5e7eb;
+            box-shadow: 0 10px 30px rgba(0, 0, 0, 0.05);
+        }
+
+        /* Final CTA section styling */
+        .final-cta-section {
+            background: #11182c; /* Dark background for contrast */
+            color: #f9fafb;
+        }
+        /* Styling for the Knowledge Tree */
+.node circle {
+    fill: #e0e7ff; /* Light indigo fill */
+    stroke: #818cf8; /* Indigo stroke */
+    stroke-width: 2px;
+    transition: all 0.5s ease;
+}
+
+.node text {
+    font-size: 10px;
+    font-weight: 600;
+    fill: #4338ca; /* Darker indigo text */
+    text-anchor: middle;
+    pointer-events: none;
+}
+
+.node {
+    animation-fill-mode: forwards;
+}
+
+.link {
+    stroke-width: 2px;
+    stroke: #9ca3af; /* Gray link color */
+    fill: none;
+    opacity: 0;
+    stroke-dasharray: 200;
+    stroke-dashoffset: 200;
+    animation: draw-line 1s ease-in-out forwards;
+}
+
+/* Keyframe Animations */
+@keyframes draw-line {
+    to {
+        stroke-dashoffset: 0;
+        opacity: 1;
+    }
+}
+
+@keyframes fade-in-node {
+    from {
+        opacity: 0;
+        transform: scale(0.5);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1);
+    }
+}
+/* Styling for the screenshot */
+.knowledge-tree-img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain; /* Ensures the entire image is visible without being cropped */
+    border-radius: 1rem; /* Soft rounded corners */
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.1);
+    border: 1px solid #e5e7eb;
+}
+    </style>
+</head>
+<body class="antialiased">
+
+    <!-- Header -->
+    <header class="absolute top-0 left-0 right-0 z-10 py-6 px-4 sm:px-6 lg:px-8">
+        <div class="max-w-7xl mx-auto flex justify-between items-center">
+            <div class="flex items-center">
+                <svg width="130" height="50" viewBox="0 0 130 50" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <defs>
+                        <linearGradient id="logoGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+                            <stop offset="0%" style="stop-color:#6366f1;stop-opacity:1" />
+                            <stop offset="100%" style="stop-color:#8b5cf6;stop-opacity:1" />
+                        </linearGradient>
+                    </defs>
+                
+                    <text
+                        x="0"
+                        y="25"
+                        font-family="Inter, sans-serif"
+                        font-size="24"
+                        font-weight="bold"
+                        fill="#374151"
+                        dominant-baseline="middle"
+                        text-anchor="start">
+                        Curi
+                    </text>
+                
+                    <g transform="translate(58, 0)">
+                        <circle cx="0" cy="25" r="8" fill="url(#logoGradient)" />
+                        <line x1="6.3" y1="31.3" x2="12.5" y2="37.5" stroke="#374151" stroke-width="2.5" stroke-linecap="round" />
+                    </g>
+                    
+                    <text
+                        x="67"
+                        y="25"
+                        font-family="Inter, sans-serif"
+                        font-size="24"
+                        font-weight="bold"
+                        fill="#374151"
+                        dominant-baseline="middle"
+                        text-anchor="start">
+                        sity
+                    </text>
+                </svg>
+            </div>
+            <a href="/index.html" class="bg-white text-gray-600 font-semibold px-5 py-2 rounded-lg shadow-sm border border-gray-200 hover:bg-gray-50 transition-colors">Login</a>        </div>
+    </header>
+
+    <!-- Section 1: Hero -->
+    <main>
+        <div class="relative bg-white pt-32 pb-20 lg:pt-48 lg:pb-28">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="text-center">
+                    <h1 class="text-4xl tracking-tight font-extrabold text-gray-900 sm:text-5xl md:text-6xl">
+                        <span class="block">Sick of texting a robot for information?</span>
+                        <span class="block gradient-text">We are.</span>
+                    </h1>
+                    <p class="mt-3 max-w-md mx-auto text-base text-gray-500 sm:text-lg md:mt-5 md:text-xl md:max-w-3xl"> We built this for ourselves, but you can use it too. Texting is for friends, not AI chat bots. This is an improved interactive learning space where you can learn about any topic, from trivia or art history to complex mathematics. 
+                    </p>
+                    <div class="mt-5 max-w-md mx-auto sm:flex sm:justify-center md:mt-8">
+                        <div class="rounded-md shadow">
+                            <a href="/index.html" class="w-full flex items-center justify-center px-8 py-3 border border-transparent text-base font-semibold rounded-md text-white bg-indigo-600 hover:bg-indigo-700 cta-button md:py-4 md:text-lg md:px-10">
+                                Start Your First Learning Journey
+                            </a>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <div class="mt-16 max-w-3xl mx-auto px-4 sm:px-6 lg:px-8">
+                <h3 class="text-center text-sm font-semibold text-gray-500 uppercase tracking-wider mb-4">Video Demo</h3>
+                <div class="bg-gray-100 rounded-2xl p-3 border border-gray-200 shadow-lg">
+                    <video class="w-full rounded-lg" autoplay muted loop playsinline>
+                        <source src="public/demo-video-mp4.mp4" type="video/mp4">
+                                                Your browser does not support the video tag.
+                    </video>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 2: Pain Point -->
+        <div class="py-20 bg-gray-50">
+            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+                <div class="lg:text-center">
+                    <h2 class="text-base text-indigo-600 font-semibold tracking-wide uppercase">Our Solution</h2>
+                    <p class="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl">
+                        Powered by ChatGPT's intelligent models, designed for human consumption. 
+                    </p>
+                    <p class="mt-4 max-w-2xl text-xl text-gray-500 lg:mx-auto">
+                        We're not built for remembering text conversations. ____ splits your topic into categories and enhances information with visual aids including interactive timelines and graphs. And then, if you want, it'll quiz you about what you learnt.  
+                    </p>
+                </div>
+                <div class="mt-12">
+                    <div class="grid grid-cols-1 gap-10 sm:grid-cols-2 lg:grid-cols-3">
+                        <div class="text-center">
+                            <div class="flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white mx-auto">
+                                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 12h16M12 4v16"/>
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 20C8 20,12 16,12 12S16 4,20 4"/>
+                                  </svg>                          </div>
+                            <h3 class="mt-5 text-lg font-semibold text-gray-900">Advanced Graphs</h3>
+                            <p class="mt-2 text-base text-gray-500">No more imagining graphs from written equations. View them in real time.</p>
+                        </div>
+                        <div class="text-center">
+                            <div class="flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white mx-auto">
+                                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z" />
+                                </svg>
+                            </div>
+                            <h3 class="mt-5 text-lg font-semibold text-gray-900">Interactive timelines</h3>
+                            <p class="mt-2 text-base text-gray-500">See visual timelines for the historical topics you're looking at. Click on any event or period on a timeline to learn more about it.</p>
+                        </div>
+                        <div class="text-center">
+                             <div class="flex items-center justify-center h-12 w-12 rounded-md bg-indigo-500 text-white mx-auto">
+                                <svg class="w-6 h-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z" />
+                                </svg>                          </div>
+                            <h3 class="mt-5 text-lg font-semibold text-gray-900">Smart Quizzes</h3>
+                            <p class="mt-2 text-base text-gray-500">Whenever you want, click the Quiz Me button to quiz you on info you've read so far.</p>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 3: Solution / Features -->
+        <div class="feature-section bg-white">
+            <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                <div>
+                    <h2 class="text-base text-indigo-600 font-semibold tracking-wide uppercase">Your Blueprint</h2>
+                    <p class="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl">
+                        See the Whole Picture
+                    </p>
+                    <p class="mt-4 text-xl text-gray-500">Generate a structured learning map for every topic. It’s your personal curriculum that grows with you. See exactly what you've learned, what comes next, and how every concept connects.</p>
+                </div>
+                <div class="feature-visual p-8 h-96 flex items-center justify-center">
+    
+                    <img src="public/learningtree.jpg" alt="A knowledge tree about Chinese History" class="knowledge-tree-img">
+                
+                </div>
+            </div>
+        </div>
+
+        <div class="feature-section bg-gray-50">
+            <div class="max-w-7xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-16 items-center">
+                <div class="feature-visual p-8 h-96 flex flex-col items-center justify-center">
+
+                
+                    <img src="public/cat.png" alt="A cat representing a topic" class="knowledge-tree-img">
+                
+                </div>
+                <div class="order-first lg:order-last">
+                    <h2 class="text-base text-indigo-600 font-semibold tracking-wide uppercase">Your Compass</h2>
+                    <p class="mt-2 text-3xl leading-8 font-extrabold tracking-tight text-gray-900 sm:text-4xl">
+                        You Are in Control
+                    </p>
+                    <p class="mt-4 text-xl text-gray-500">Your learning path adapts to you. Use 'Go Deeper' to branch into sub-topics or ask a more specific written question at any time. Your curiosity leads the way.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Section 4: Final CTA -->
+        <div class="final-cta-section">
+            <div class="max-w-4xl mx-auto text-center py-16 px-4 sm:py-20 sm:px-6 lg:px-8">
+                <h2 class="text-3xl font-extrabold text-white sm:text-4xl">
+                    <span class="block">Become a Founding User.</span>
+                    <span class="block text-indigo-400">Free, Forever.</span>
+                </h2>
+                <p class="mt-4 text-lg leading-6 text-indigo-200">
+                    The first batch of users to sign up will get lifetime access to features—present and future—at at absolutely no cost. Forever. 
+                </p>
+                <a href="/index.html" class="mt-8 w-full inline-flex items-center justify-center px-6 py-3 border border-transparent rounded-md shadow-sm text-base font-semibold text-indigo-600 bg-white hover:bg-indigo-50 cta-button sm:w-auto">
+                    Claim Your Free Lifetime Account
+                </a>
+                 <div class="mt-8 text-left text-sm text-indigo-200 space-y-2 max-w-sm mx-auto">
+                    <p><strong>What can I learn?</strong> Anything you can imagine. Our AI is designed to tackle topics from trivia topics, art history to complex mathematics.</p>
+                    <p><strong>What happens if paid plans are introduced?</strong> Even if paid plans are introduced, users who signed up as founding users will always have free access.</p>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- Footer -->
+    <footer class="bg-white">
+        <div class="max-w-7xl mx-auto py-8 px-4 sm:px-6 lg:px-8 text-center text-gray-400 text-sm">
+            <p>&copy; 2025 Curiosity. All rights reserved.</p>
+        </div>
+    </footer>
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const tree = document.getElementById('knowledgeTree');
+    
+            // Nodes and links to animate
+            const nodes = [
+                { id: 'node1', delay: 0 },
+                { id: 'node2', delay: 1000 },
+                { id: 'node3', delay: 2000 },
+                { id: 'node4', delay: 3000 }
+            ];
+    
+            const links = [
+                { id: 'link1', delay: 500 },
+                { id: 'link2', delay: 1500 },
+                { id: 'link3', delay: 2500 }
+            ];
+    
+            // Function to apply animation
+            const animateElement = (elementId, animation, duration, delay) => {
+                const el = document.getElementById(elementId);
+                if (el) {
+                    el.style.animation = `${animation} ${duration}s ease-in-out ${delay}s forwards`;
+                    // Make the animated element visible before animation starts
+                    if(animation === 'fade-in-node') {
+                       setTimeout(() => el.style.opacity = 1, delay * 1000 - 50);
+                    }
+                }
+            };
+    
+            // Trigger animations
+            nodes.forEach(node => {
+                // Apply a transform origin for the scale effect
+                const nodeEl = document.getElementById(node.id);
+                if (nodeEl) {
+                     const bbox = nodeEl.getBBox();
+                     const cx = bbox.x + bbox.width / 2;
+                     const cy = bbox.y + bbox.height / 2;
+                     nodeEl.style.transformOrigin = `${cx}px ${cy}px`;
+                }
+                animateElement(node.id, 'fade-in-node', 0.5, node.delay / 1000);
+            });
+    
+            links.forEach(link => {
+                animateElement(link.id, 'draw-line', 1, link.delay / 1000);
+            });
+        });
+    </script>
+</body>
+</html>
