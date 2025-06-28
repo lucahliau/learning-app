@@ -3,6 +3,10 @@
       {
         "src": "/",
         "dest": "/landing.html"
+      },
+      {
+        "src": "/app",
+        "dest": "/app.html"
       }
     ]
   }
