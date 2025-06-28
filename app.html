@@ -1829,7 +1829,22 @@
             </button>
         </div>
     </div>
+    <div id="verifyEmailView" style="display: none; justify-content: center; align-items: center; height: 100vh;">
+        <div style="background: #ffffff; padding: 40px; border-radius: 20px; width: 450px; border: 1px solid #e5e7eb; text-align: center;">
+            <h2 style="font-size: 24px; color: #11182c; font-weight: 700; margin-bottom: 15px;">Verify Your Email</h2>
+            <p style="color: #4b5563; font-size: 16px; line-height: 1.6; margin-bottom: 25px;">
+                We've sent a verification link to <strong id="verificationEmail" style="color: #11182c;"></strong>. Please check your inbox (and spam folder) to continue.
+            </p>
+            
+            <p id="resendMessage" style="color: #16a34a; margin-bottom: 15px; height: 20px;"></p>
     
+            <div style="display: flex; gap: 15px;">
+                <button id="resendVerificationBtn" class="modal-btn submit" style="flex: 1;">Resend Email</button>
+                <button id="checkVerificationBtn" class="modal-btn submit" style="flex: 1; background: #6b7280;">I've Verified, Continue</button>
+            </div>
+            <button id="signOutFromVerifyBtn" class="forgot-password-button" style="margin-top: 25px;">Sign Out</button>
+        </div>
+    </div>
     <div id="appContainer" style="display: none;">
         </div>
     <!-- This is the new Landing Page View -->
@@ -2735,29 +2750,103 @@ const authError = document.getElementById('authError');
 // --- Authentication Logic ---
 
 // Listen for login/signup button clicks
+// --- Replace your existing loginBtn listener with this enhanced version ---
+
 loginBtn.addEventListener('click', () => {
+    const authError = document.getElementById('authError');
+
+    // Clear previous messages and set color to red for potential errors
+    authError.textContent = '';
+    authError.style.color = '#dc2626'; // Default to red for errors
+
     auth.signInWithEmailAndPassword(emailInput.value, passwordInput.value)
-        .catch(error => { authError.textContent = error.message; });
+        .catch(error => {
+            let userMessage;
+
+            // Check for specific Firebase error codes
+            switch (error.code) {
+                case 'auth/invalid-login-credentials':
+                case 'auth/user-not-found':
+                case 'auth/wrong-password':
+                    userMessage = 'Incorrect email or password. Please try again.';
+                    break;
+                case 'auth/invalid-email':
+                    userMessage = 'Please enter a valid email address.';
+                    break;
+                case 'auth/too-many-requests':
+                    userMessage = 'Access to this account has been temporarily disabled. Please reset your password or try again later.';
+                    break;
+                case 'auth/network-request-failed':
+                    userMessage = 'Network error. Please check your connection.';
+                    break;
+                default:
+                    // A catch-all for any other errors
+                    userMessage = 'An unexpected error occurred. Please try again.';
+                    console.error("Login Error:", error); // Log the original error for you to see
+                    break;
+            }
+
+            authError.textContent = userMessage;
+
+            // Make the error message disappear after 5 seconds
+            setTimeout(() => {
+                authError.textContent = '';
+            }, 5000);
+        });
 });
 
+// --- Replace your signupBtn listener with this one ---
 signupBtn.addEventListener('click', () => {
+    const authError = document.getElementById('authError');
+    authError.textContent = ''; // Clear previous errors
+
     auth.createUserWithEmailAndPassword(emailInput.value, passwordInput.value)
-        .catch(error => { authError.textContent = error.message; });
+        .then((userCredential) => {
+            // User created successfully. Now, send the verification email.
+            console.log('User created, sending verification email...');
+            return userCredential.user.sendEmailVerification();
+        })
+        .then(() => {
+            console.log('Verification email sent.');
+            // The onAuthStateChanged listener will automatically show the 'verify email' screen.
+        })
+        .catch(error => {
+            // Handle signup errors (e.g., email already in use)
+            authError.textContent = error.message;
+        });
 });
 
 // This is the gatekeeper. It checks if a user is logged in or not.
+// --- Replace your entire onAuthStateChanged function with this new gatekeeper ---
 auth.onAuthStateChanged(user => {
-    if (user) {
-        // User is signed in.
-        authView.style.display = 'none'; // Hide login form
-        appContainer.style.display = 'block'; // Show the main app
+    const authView = document.getElementById('authView');
+    const appContainer = document.getElementById('appContainer');
+    const verifyEmailView = document.getElementById('verifyEmailView'); // Get the new view
 
-        // This is where we will load their saved data! (Phase 4)
-        loadTopicsFromFirestore(user.uid); 
+    if (user) {
+        // User is signed in. Check if their email is verified.
+        if (user.emailVerified) {
+            // --- User is verified, let them in ---
+            authView.style.display = 'none';
+            verifyEmailView.style.display = 'none';
+            appContainer.style.display = 'block';
+
+            // Load their data as normal
+            loadTopicsFromFirestore(user.uid);
+        } else {
+            // --- User is NOT verified, show the verify screen ---
+            authView.style.display = 'none';
+            appContainer.style.display = 'none';
+            
+            // Display the user's email on the verification page
+            document.getElementById('verificationEmail').textContent = user.email;
+            verifyEmailView.style.display = 'flex';
+        }
     } else {
-        // User is signed out.
-        authView.style.display = 'flex'; // Show login form
-        appContainer.style.display = 'none'; // Hide the main app
+        // --- User is signed out, show the login form ---
+        authView.style.display = 'flex';
+        appContainer.style.display = 'none';
+        verifyEmailView.style.display = 'none';
     }
 });
 // Function to save the entire learningTopics object to Firestore
@@ -5932,6 +6021,52 @@ forgotPasswordBtn.addEventListener('click', () => {
                 authError.textContent = '';
             }, 5000);
         });
+});
+// --- Add this script for the new verification view buttons ---
+
+document.getElementById('resendVerificationBtn').addEventListener('click', () => {
+    const user = auth.currentUser;
+    const resendBtn = document.getElementById('resendVerificationBtn');
+    const resendMsg = document.getElementById('resendMessage');
+
+    if (user) {
+        user.sendEmailVerification()
+            .then(() => {
+                resendMsg.textContent = 'A new verification email has been sent.';
+                resendBtn.disabled = true; // Prevent spamming
+                // Re-enable the button after 20 seconds
+                setTimeout(() => {
+                    resendMsg.textContent = '';
+                    resendBtn.disabled = false;
+                }, 20000);
+            }).catch(error => {
+                resendMsg.textContent = error.message;
+            });
+    }
+});
+
+document.getElementById('checkVerificationBtn').addEventListener('click', () => {
+    const user = auth.currentUser;
+    if (user) {
+        // Reload the user's data from Firebase to get the latest verification status
+        user.reload().then(() => {
+            if (auth.currentUser.emailVerified) {
+                // If verified, hide the verify view and show the app
+                document.getElementById('verifyEmailView').style.display = 'none';
+                document.getElementById('appContainer').style.display = 'block';
+                loadTopicsFromFirestore(auth.currentUser.uid);
+            } else {
+                // If not, inform the user
+                const resendMsg = document.getElementById('resendMessage');
+                resendMsg.textContent = 'Email is still not verified. Please check your inbox/spam.';
+                setTimeout(() => { resendMsg.textContent = '' }, 5000);
+            }
+        });
+    }
+});
+
+document.getElementById('signOutFromVerifyBtn').addEventListener('click', () => {
+    auth.signOut();
 });
     </script>
     <!-- New Topic Modal -->
