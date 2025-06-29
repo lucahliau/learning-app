@@ -1976,95 +1976,9 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
-    <script>
-
-        /**
- * Creates a text description of visual assets for the AI context.
- * @param {Array} visualAssets - The visualAssets array from a content object.
- * @returns {string} A plain text description of the visuals.
- */
-function formatVisualAssetsForContext(visualAssets) {
-    if (!visualAssets || visualAssets.length === 0) return '';
-
-    let description = 'The user was also shown the following visual aid(s):\n';
-    visualAssets.forEach(asset => {
-        if (asset.type === 'hybrid_timeline') {
-            const eventNames = asset.data.map(d => d.name).join(', ');
-            description += `- A timeline titled "${asset.data.title || 'Timeline'}" featuring: ${eventNames}.\n`;
-        } else if (asset.type === 'implicit_plotter') {
-            description += `- A graph displaying the equation(s): ${asset.data}.\n`;
-        } else if (asset.type === 'bar_chart') {
-            description += `- A bar chart with the data:\n${asset.data}\n`;
-        } else if (asset.type === 'pie_chart') {
-            description += `- A pie chart with the data:\n${asset.data}\n`;
-        }
-    });
-    return description;
-}
-
-/**
- * Traverses the tree from the user's current location up to the root,
- * compiling all content along the way.
- * @param {object} startNode - The node where the user asked the question (the parent of the new question node).
- * @returns {string} A string containing all the content from the node's direct lineage.
- */
-function getLineageContent(startNode) {
-    let lineage = [];
-    let currentNode = startNode;
-    while (currentNode) {
-        if (currentNode.content) {
-            let contentString = `--- Content for: "${currentNode.fullTitle}" ---\n`;
-            
-            // Add overview/explanation text
-            const tempDiv = document.createElement('div');
-            tempDiv.innerHTML = currentNode.content.overview;
-            contentString += (tempDiv.textContent || tempDiv.innerText || "") + "\n\n";
-
-            // Add definitions
-            if (currentNode.content.definitions && currentNode.content.definitions.length > 0) {
-                contentString += 'Key Terms Defined:\n';
-                currentNode.content.definitions.forEach(def => {
-                    contentString += `- ${def.term}: ${def.definition}\n`;
-                });
-                contentString += '\n';
-            }
-            
-            // Add visual asset descriptions
-            contentString += formatVisualAssetsForContext(currentNode.content.visualAssets);
-            
-            lineage.unshift(contentString); // Add to the beginning to maintain top-to-bottom order
-        }
-        currentNode = currentNode.parent;
-    }
-    return lineage.join('\n');
-}
-
-/**
- * Creates a string representation of the entire topic tree structure.
- * @param {object} node - The starting node (usually the root).
- * @param {string} currentPositionNodeId - The ID of the node the user is currently on.
- * @param {string} [indent=''] - The current indentation level for recursion.
- * @returns {string} A string formatted as an indented list representing the tree.
- */
-function buildTreeStructureString(node, currentPositionNodeId, indent = '') {
-    let treeString = '';
-    const isCurrentPosition = (node.id === currentPositionNodeId);
-    const marker = isCurrentPosition ? ' <-- (You are here)' : '';
-    
-    treeString += `${indent}- ${node.fullTitle}${marker}\n`;
-
-    if (node.children && node.children.length > 0) {
-        node.children.forEach(child => {
-            treeString += buildTreeStructureString(child, currentPositionNodeId, indent + '  ');
-        });
-    }
-    return treeString;
-}
-        /**
- * Finds and renders all LaTeX math expressions within a given DOM element
- * using the KaTeX library.
- * @param {HTMLElement} element - The parent element to search within.
- */
+    <script type="module">
+import { formatVisualAssetsForContext, getLineageContent, buildTreeStructureString } from './prompt-builder.js';
+      
 function triggerMathRendering(element) {
     // This is a KaTeX function that will find and render math expressions.
     // We need to import an additional script for it to work.
@@ -2080,24 +1994,7 @@ function triggerMathRendering(element) {
         });
     }
 }
-/**
- * Fixes malformed JSON by wrapping unquoted keys in double quotes.
- * e.g., { topic: "Science" } becomes { "topic": "Science" }
- * @param {string} jsonString - The potentially malformed JSON string.
- * @returns {string} A repaired JSON string.
- */
- /**
- * A robust function to find, clean, and parse a JSON object from a raw text string.
- * This handles conversational text, code fences, and invalid escape characters.
- * @param {string} rawText The raw text response from the AI.
- * @returns {object} The parsed JavaScript object.
- */
- /**
- * A robust function to find and parse a JSON object from a raw text string.
- * This version relies on the AI producing valid JSON and the native parser.
- * @param {string} rawText The raw text response from the AI.
- * @returns {object} The parsed JavaScript object.
- */
+
 function sanitizeAndParseJson(rawText) {
     // Find the JSON block, ignoring conversational text and code fences like ```json
     const startIndex = rawText.indexOf('{');
@@ -2448,7 +2345,7 @@ Your response MUST be a single, valid JSON object with no other text before or a
 
 1.  In the "explanation" value, provide a detailed, non-generic explanation of the topic with at least 2 paragraphs. For topics that are mathematical in nature, **For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters. For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters like $...$ or $$...$$**
 2.  In the "definitions" value, provide an array of objects. For each object, identify a technical term from your explanation and provide a simple, one-sentence definition for it in the context of the topic. Only add/define these technical terms if they are truly technical and not straightforward, and their definition is specific to the context. Terms like focus, endurance, mental toughness which are obvious should not be included. 
-3.  In the "visualAssets" value, (this key is optional), analyze your explanation. If a visual aid would enhance understanding, add this key. If not, OMIT this key entirely.
+3.  In the "visualAssets" value, (this key is optional), analyze your explanation. If a visual aid could significantly enhance understanding, add this key. If not, OMIT this key entirely.
     * If included, it must be an array of objects. Each object represents one visual asset.
     * For each asset, provide a "type" and "data".
 
