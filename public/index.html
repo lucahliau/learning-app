@@ -303,7 +303,7 @@
                     color: white;
                 }
                 .modal-btn.submit:hover {
-                    background: #c2410c;
+                    background: #34495e;
                 }
         
                 .app-wrapper {
@@ -2446,7 +2446,7 @@ function renderHybridTimeline(container, hybridData) {
         
 Your response MUST be a single, valid JSON object with no other text before or after it. All keys and string values MUST use double quotes ("). Do NOT use unescaped newline characters.
 
-1.  In the "explanation" value, provide a detailed, explanation of the topic with at least 2 paragraphs. **For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters. For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters like $...$ or $$...$$**
+1.  In the "explanation" value, provide a detailed, non-generic explanation of the topic with at least 2 paragraphs. For topics that are mathematical in nature, **For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters. For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters like $...$ or $$...$$**
 2.  In the "definitions" value, provide an array of objects. For each object, identify a technical term from your explanation and provide a simple, one-sentence definition for it in the context of the topic. Only add/define these technical terms if they are truly technical and not straightforward, and their definition is specific to the context. Terms like focus, endurance, mental toughness which are obvious should not be included. 
 3.  In the "visualAssets" value, (this key is optional), analyze your explanation. If a visual aid would enhance understanding, add this key. If not, OMIT this key entirely.
     * If included, it must be an array of objects. Each object represents one visual asset.
@@ -4509,7 +4509,7 @@ async function elaborateOnTopic(targetNode, generateNewCards = false) {
 Your response MUST be a single, valid JSON object with no other text before or after it.Do NOT use unescaped newline characters.
 The JSON object must have three keys: "explanation", "definitions", and an optional "visualAssets".
 
-1.  In the "explanation" value, provide a detailed, explanation of the topic with at least 2 paragraphs. **For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters. For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters like $...$ or $$...$$**
+1.  In the "explanation" value, provide a detailed, non-generic explanation of the topic with at least 2 paragraphs. **For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters. For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters like $...$ or $$...$$**
 2.  In the "definitions" value, provide an array of objects for any technical terms used.
 3.  In the "visualAssets" value, (this key is optional, but **strongly encouraged** for STEM topics), you MUST use this key if the explanation can be enhanced with graphs or charts.If you include a visual reference (e.g. graph equation) feel free to refer in your "explanation" content directly to them.
     * The value must be an array of "layout_row" objects. Each row represents a horizontal container.
@@ -4653,7 +4653,7 @@ Provide only the titles in a simple numbered list format. Do not add description
 Your response MUST be a single, valid JSON object with no other text before or after it.Do NOT use unescaped newline characters.
 The JSON object must have three keys: "explanation", "definitions", and an optional "visualAssets".
 
-1.  In the "explanation" value, provide a detailed, explanation of the topic with at least 2 paragraphs. **For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters. Use $ for inline math (e.g., Let $x$ be a variable) and $$ for display math (e.g., $$E = mc^2$$).**
+1.  In the "explanation" value, provide a detailed, non-generic explanation of the topic with at least 2 paragraphs. **For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters. Use $ for inline math (e.g., Let $x$ be a variable) and $$ for display math (e.g., $$E = mc^2$$).**
 2.  In the "definitions" value, provide an array of objects. For each object, identify a technical term from your explanation and provide a simple, one-sentence definition for it in the context of the topic. Only add/define these technical terms if they are truly technical and not straightforward, and their definition is specific to the context. Terms like focus, endurance, mental toughness which are not included. 
 3.  In the "visualAssets" value, (this key is optional), analyze your explanation. If a visual aid would enhance understanding, add this key. If not, OMIT this key entirely.If you include a visual reference (timeline or graph equation) feel free to refer in your "explanation" content directly to them.
     * If included, it must be an array of objects. Each object represents one visual asset.
