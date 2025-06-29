@@ -2816,29 +2816,6 @@ window.addEventListener('beforeunload', () => {
 });
 
 
-function restoreLastSession() {
-    const savedStateJSON = sessionStorage.getItem('learningAppLastState');
-    if (savedStateJSON) {
-        sessionStorage.removeItem('learningAppLastState');
-        try {
-            const savedState = JSON.parse(savedStateJSON);
-            const { topicId, nodeId } = savedState;
-            if (topicId && nodeId && learningTopics[topicId]) {
-                const targetNode = findNodeById(learningTopics[topicId], nodeId);
-                if (targetNode) {
-                    console.log('Restoring previous session state:', savedState);
-                    if (setupLearningViewForTopic(topicId)) {
-                        navigateToNode(nodeId);
-                        return true;
-                    }
-                }
-            }
-        } catch (error) {
-            console.error('Failed to parse or restore session state:', error);
-        }
-    }
-    return false;
-}
 // Function to load topics when a user logs in
 // =================== START: REPLACE THIS FUNCTION ===================
 // REPLACE the entire loadTopicsFromFirestore function
