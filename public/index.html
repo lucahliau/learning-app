@@ -1995,32 +1995,7 @@ function triggerMathRendering(element) {
     }
 }
 
-function sanitizeAndParseJson(rawText) {
-    // Find the JSON block, ignoring conversational text and code fences like ```json
-    const startIndex = rawText.indexOf('{');
-    const endIndex = raw.lastIndexOf('}');
 
-    if (startIndex === -1 || endIndex === -1 || endIndex < startIndex) {
-        console.error("COULD NOT FIND JSON in the following text:", rawText);
-        throw new Error("No valid JSON object found in the AI response.");
-    }
-
-    // Extract the potential JSON string
-    let jsonString = rawText.substring(startIndex, endIndex + 1);
-
-    // The aggressive .replace(/\\/g, '\\\\') line has been REMOVED.
-    // This was the cause of the double-backslash issue in your LaTeX.
-
-    try {
-        return JSON.parse(jsonString);
-    } catch (e) {
-        console.error("---!!!--- JSON PARSING FAILED ---!!!---");
-        console.error("The code could not parse the following string:", jsonString);
-        console.error("The specific error was:", e.message);
-        // We re-throw the error so the calling function knows the parse failed.
-        throw e;
-    }
-}
 // --- ADVANCED DATE PARSING & SCALING (No Changes) ---
 const isLeapYear = (year) => (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
 const getDayOfYear = (date) => {
@@ -5270,7 +5245,7 @@ mainContent.addEventListener('mouseout', (event) => {
                 return;
             }
 
-            // Check if every child node is marked as read
+            // Check if every child node is marked as san
             const allChildrenAreRead = parentNode.children.every(child => child.isRead);
 
             // Update the parent's read status
