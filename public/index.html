@@ -2814,23 +2814,7 @@ window.addEventListener('beforeunload', () => {
         console.log('Saved state to sessionStorage:', stateToSave);
     }
 });
-// ADD THESE TWO FUNCTIONS
 
-function setupLearningViewForTopic(topicId) {
-    currentTopicId = topicId;
-    const topicData = learningTopics[topicId];
-    if (!topicData) {
-        console.error("Topic not found:", topicId);
-        return false;
-    }
-    topicData.lastOpened = Date.now();
-    treeStructure = topicData;
-    navigationHistory = [];
-    currentHistoryIndex = -1;
-    document.getElementById('sidebarTitle').innerHTML = createTagsHTML(treeStructure);
-    switchView('learningView');
-    return true;
-}
 
 function restoreLastSession() {
     const savedStateJSON = sessionStorage.getItem('learningAppLastState');
