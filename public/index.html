@@ -2641,27 +2641,41 @@ deleteConfirmModal.addEventListener('click', (e) => {
 });
 
 // This is the main logic for when the user confirms the deletion
-confirmDeleteBtn.addEventListener('click', async () => {
+confirmDeleteBtn.addEventListener('click', () => {
     if (!currentTopicId) {
         alert("Error: No topic is currently loaded.");
         return;
     }
 
-    // Step 1: Delete the topic from our local JavaScript object
-    delete learningTopics[currentTopicId];
-    console.log(`Locally deleted topic: ${currentTopicId}`);
+    const topicIdToDelete = currentTopicId;
+    const topicDataBackup = { ...learningTopics[topicIdToDelete] }; // Backup for rollback
 
-    // Step 2: Save the updated (smaller) topics object to Firestore.
-    // This overwrites the old data, effectively deleting the topic from the database.
-    await saveTopicsToFirestore();
-    console.log("Deletion saved to Firestore.");
+    // --- Optimistic UI Update ---
+    // 1. Immediately delete the topic from the local state
+    delete learningTopics[topicIdToDelete];
+    console.log(`Optimistically deleted topic: ${topicIdToDelete}`);
 
-    // Step 3: Close the modal
+    // 2. Immediately close the modal and update the UI
     closeDeleteModal();
-
-    // Step 4: Go back to the main menu and refresh the list of topic cards
     renderTopicCards();
     switchView('landingView');
+
+    // 3. Perform the database operation in the background
+    saveTopicsToFirestore()
+        .then(() => {
+            console.log("Deletion successfully saved to Firestore.");
+        })
+        .catch(error => {
+            // --- Rollback on Failure ---
+            console.error("Firestore deletion failed:", error);
+            alert("Could not delete the topic from the cloud. It will be restored.");
+            
+            // Restore the topic locally
+            learningTopics[topicIdToDelete] = topicDataBackup;
+            
+            // Re-render the UI to show the restored topic
+            renderTopicCards();
+        });
 });
 
 // --- END OF NEW JAVASCRIPT FOR DELETION ---
