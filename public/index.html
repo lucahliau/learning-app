@@ -3843,8 +3843,8 @@ function renderTreeNode(node, level = 0) {
     let html = `
         <div class="tree-node" style="margin-left: ${level * 25}px;">
             <div class="tree-node-content ${node === currentTreeNode ? 'active' : ''}" 
-                 onclick="navigateToNode('${node.id}')"
-                 title="${toTitleCase(node.fullTitle || node.title)}"> 
+     data-node-id="${node.id}"
+     title="${toTitleCase(node.fullTitle || node.title)}">
                 
                 ${statusIndicatorHTML}
 
@@ -4462,8 +4462,8 @@ async function elaborateOnCurrent() {
             if (location === 'inline' && !currentNodeHasCards) {
                 // Case 1.1: Append to the current node's content.
                 const separator = `<hr style="border: none; border-top: 1px solid #e5e7eb; margin: 25px 0;">`;
-                const titleHeader = `<h3>${question}</h3>`; // Add the user's question as a title
-                const highlightedNewText = applyTermHighlighting(parsedContent.overview, parsedContent.definitions);
+                const titleHeader = `<h3>Your Question: ${toTitleCase(question)}</h3>`;
+                                const highlightedNewText = applyTermHighlighting(parsedContent.overview, parsedContent.definitions);
                 
                 currentNode.content.overview += separator + titleHeader + highlightedNewText;
                 
@@ -5043,6 +5043,16 @@ mainContent.addEventListener('mouseout', (event) => {
 
 
         });
+        // --- FIX FOR TREE NAVIGATION ---
+document.getElementById('treeContainer').addEventListener('click', (e) => {
+    // Find the closest parent element that is a tree node
+    const nodeElement = e.target.closest('.tree-node-content');
+    
+    // If we found a node and it has a data-node-id, navigate to it
+    if (nodeElement && nodeElement.dataset.nodeId) {
+        navigateToNode(nodeElement.dataset.nodeId);
+    }
+});
         // Checks if all children of a node are read and updates the parent's status
         function updateParentReadStatus(parentNode) {
             // Do nothing if there's no parent or the parent has no children
