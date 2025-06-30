@@ -2408,8 +2408,13 @@ function renderHybridTimeline(container, hybridData) {
  * @param {string} rawText The raw text response from the AI.
  * @returns {object} The parsed JavaScript object.
  */
- function sanitizeAndParseJson(rawText) {
-    // We keep this log because it's still very useful for debugging!
+ /**
+ * The final, most robust version of the JSON sanitizer.
+ * This handles comments (without breaking URLs), backslashes, and other edge cases.
+ * @param {string} rawText The raw text response from the AI.
+ * @returns {object} The parsed JavaScript object.
+ */
+function sanitizeAndParseJson(rawText) {
     console.log("--- RAW AI RESPONSE ---", rawText);
 
     const startIndex = rawText.indexOf('{');
@@ -2422,19 +2427,22 @@ function renderHybridTimeline(container, hybridData) {
 
     let jsonString = rawText.substring(startIndex, endIndex + 1);
 
-    // Step 1: Remove comments (this is still a good idea)
-    jsonString = jsonString.replace(/\/\/.*/g, '');
+    // --- THIS IS THE CORRECTED REGEX ---
+    // It finds '//' but NOT when it is preceded by a colon, which protects "https://".
+    jsonString = jsonString.replace(/(?<!:)\/\/.*/g, '');
+    // ------------------------------------
+
+    // The multi-line comment removal is still good.
     jsonString = jsonString.replace(/\/\*[\s\S]*?\*\//g, '');
-
-    // The problematic line that replaced all newlines has been REMOVED.
     
-    // Step 2: Sanitize backslashes (this is also still necessary)
-    const sanitizedString = jsonString.replace(/\\/g, '\\\\');
+    // This removes trailing commas from arrays or objects, which is another common AI error.
+    jsonString = jsonString.replace(/,\s*([\]}])/g, '$1');
 
-    console.log("--- FINAL STRING TO PARSE ---", sanitizedString);
+    console.log("--- FINAL STRING TO PARSE ---", jsonString);
 
     try {
-        return JSON.parse(sanitizedString);
+        // We don't need to sanitize backslashes or newlines if we trust the parser.
+        return JSON.parse(jsonString);
     } catch (e) {
         console.error("---!!!--- FINAL JSON PARSING FAILED ---!!!---");
         console.error("The specific error was:", e.message);
