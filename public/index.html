@@ -5832,7 +5832,8 @@ submitGraphBtn.addEventListener('click', async () => {
         const response = await fetch(BACKEND_URL + '/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ messages: vegaConversation })
+            // Add the 'purpose' key to the JSON body
+            body: JSON.stringify({ messages: vegaConversation, purpose: 'graph_lab' })
         });
 
         if (!response.ok) throw new Error('API request failed');
