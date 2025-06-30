@@ -320,7 +320,9 @@ USER'S REQUEST: "${userPrompt}"
     - Use a layered approach. The top-level spec should have a "layer" array containing different marks (lines, points, text, areas).
     - Assume a standard X-Y axis plot (first quadrant, where x and y are positive) unless the user's request (e.g., "a sine wave from -pi to pi") implies otherwise.
     - Title the graph and axes appropriately based on the user's request.
-    4.  **CRITICAL RULE: Use Calculation, Not Hardcoding:** For any feature that is mathematically derived from another (e.g., intersections, tangent lines, areas between curves), you **MUST** use Vega-Lite's "transform" array with "calculate" expressions. **Do not pre-calculate the values and hardcode them.** The spec must be self-contained and reproducible. Start with base layers for the main lines, then add new layers that use transforms to create the derived graphics.
+   4.  **CRITICAL RULE 1: Use Calculation, Not Hardcoding:** For any feature that is mathematically derived from another (e.g., intersections, areas), you **MUST** use Vega-Lite's "transform" array with "calculate" expressions. Do not pre-calculate the values and hardcode them.
+
+5.  **CRITICAL RULE 2: Always Specify Encoding Type:** In every "encoding" block, every channel definition (like "x", "y", "y2", "text") **MUST** include a "type" property (e.g., "quantitative", "nominal", "ordinal", or "temporal").
 
 
 --- VEGA-LITE HINTS & CAPABILITIES ---
@@ -331,7 +333,42 @@ USER'S REQUEST: "${userPrompt}"
 - **Labels on Graph:** Add a new layer with \`"mark": "text"\`. Use the "text" encoding channel.
 - **Line of Best Fit:** Add a new layer and apply a "regression" transform to the data.
 - **Tangents/Intercepts:** You must calculate the data points for these lines yourself and add them as a separate line layer.
-
+--- ADVANCED EXAMPLE: Shading the area between y=x and y=x+1 ---
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "description": "Shading the area between two lines.",
+  "data": { "sequence": {"start": 0, "stop": 10, "step": 0.2}, "as": "x" },
+  "layer": [
+    {
+      "mark": "line",
+      "transform": [{ "calculate": "datum.x", "as": "y" }],
+      "encoding": {
+        "x": {"field": "x", "type": "quantitative"},
+        "y": {"field": "y", "type": "quantitative"}
+      }
+    },
+    {
+      "mark": "line",
+      "transform": [{ "calculate": "datum.x + 1", "as": "y" }],
+      "encoding": {
+        "x": {"field": "x", "type": "quantitative"},
+        "y": {"field": "y", "type": "quantitative"}
+      }
+    },
+    {
+      "mark": {"type": "area", "opacity": 0.3},
+      "transform": [
+        { "calculate": "datum.x", "as": "lower_y" },
+        { "calculate": "datum.x + 1", "as": "upper_y" }
+      ],
+      "encoding": {
+        "x": {"field": "x", "type": "quantitative"},
+        "y": {"field": "lower_y", "type": "quantitative", "title": "y-value"},
+        "y2": {"field": "upper_y", "type": "quantitative"}
+      }
+    }
+  ]
+}
 EXAMPLE of a layered spec for "a sine wave with a point at pi":
 {
   "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
