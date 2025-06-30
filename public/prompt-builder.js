@@ -154,12 +154,12 @@ export function getStemElaborationPrompt({ topicTitle, sophistication, currentNo
         lineageContent
     });
 
-    return `You are an expert educator specializing in Science and Mathematics who carries out tasks with precision and speed.
+    return `You are an expert educator specializing in Science, Mathematics and Economics who carries out tasks with precision and speed.
     
 ${sharedContext}
 
 TASK:
-Your task is to provide a detailed explanation of the topic "${currentNodeTitle}", with 2-3 paragraphs.
+Your task is to provide a detailed explanation of the topic "${currentNodeTitle}", with 2-3 paragraphs. 
 
 ${DETAILED_JSON_FORMAT_INSTRUCTIONS}`;
 }
@@ -229,7 +229,7 @@ The JSON object must have two required keys ("category", "syllabus") and one opt
 1.  **"category"**: Categorize this topic into ONE of the following predefined categories: ${categories.join(', ')}.
 2.  **"syllabus"**: In case a, write a syllabus with 6-12 modules, which together are MECE. In case b, Design a syllabus as a numbered list of 4-8 unique and compelling module titles for the topic. In both cases this value must be a single string. The modules should be specific to the topic and in case b, not generic at all. Provide only the titles. Avoid generic titles like "Introduction" or "Key Concepts.", 'historical context'.
 3.  **"visualAssets" (Optional)**:
-    * **IF the topic's category is NOT "Science" or "Mathematics"** and is inherently historical or best understood chronologically, you MAY include this key. If you choose to include it, make it detailed e.g. aim for 5-10 events/periods, though more if the topic demands it. For instance if asked about chinese imperial history make sure to include all the dynasties, not just some.
+    * **IF the topic's category is NOT "Science" or "Mathematics"** and is inherently historical and best understood chronologically, you MAY include this key. If you choose to include it, make it detailed e.g. aim for 9-10 events/periods, though more if the topic demands it. For instance if asked about chinese imperial history make sure to include all the dynasties, not just some.
     * **IF the topic's category IS "Science" or "Mathematics", OMIT this key entirely.**
     * If included, it MUST be an array containing a single object for a timeline.If you include a visual reference (timeline or graph equation) feel free to refer in your "explanation" content directly to them.
     * The object's "type" MUST be "hybrid_timeline".
@@ -303,4 +303,59 @@ Analyze the user's question and choose the best response format. Your response M
       --- END OF INNER OBJECT RULES ---
 
 Do not add any other text before or after the JSON object.`;
+}
+export function getVegaLiteSpecPrompt(userPrompt) {
+    return `You are an expert data visualization assistant specializing in creating Vega-Lite (v5) specifications. Your task is to convert a user's natural language request into a single, valid Vega-Lite JSON object.
+
+USER'S REQUEST: "${userPrompt}"
+
+--- YOUR TASK ---
+
+1.  **Analyze the Request:** Carefully read the user's request to understand all the desired components: functions, points, labels, colors, shaded areas, intercepts, tangent lines, etc.
+2.  **Generate Data:** You must generate the necessary data within the Vega-Lite spec.
+    - For functions (e.g., "a sine wave from 0 to 10"), create data using a "sequence" transform.
+    - For scatter plots or specific points, create an inline dataset (e.g., { "values": [{"x": 1, "y": 2}, ...] }).
+3.  **Construct the Vega-Lite JSON:** Create a complete Vega-Lite specification.
+    - Your response MUST be ONLY the JSON object. Do not include "\`\`\`json" or any other conversational text.
+    - Use a layered approach. The top-level spec should have a "layer" array containing different marks (lines, points, text, areas).
+    - Assume a standard X-Y axis plot (first quadrant, where x and y are positive) unless the user's request (e.g., "a sine wave from -pi to pi") implies otherwise.
+    - Title the graph and axes appropriately based on the user's request.
+
+--- VEGA-LITE HINTS & CAPABILITIES ---
+- **Lines & Curves:** Use \`"mark": "line"\`.
+- **Plotted Points:** Use \`"mark": "point"\` or \`"mark": "circle"\`.
+- **Dotted Lines:** In a line's encoding, add \`"strokeDash": {"value": [5, 5]}\`.
+- **Shaded Areas:** Use \`"mark": {"type": "area", "opacity": 0.3}\`. For the area between two lines, you may need a "transform" to calculate the upper and lower bounds.
+- **Labels on Graph:** Add a new layer with \`"mark": "text"\`. Use the "text" encoding channel.
+- **Line of Best Fit:** Add a new layer and apply a "regression" transform to the data.
+- **Tangents/Intercepts:** You must calculate the data points for these lines yourself and add them as a separate line layer.
+
+EXAMPLE of a layered spec for "a sine wave with a point at pi":
+{
+  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
+  "description": "A layered plot of a sine wave and a point.",
+  "layer": [
+    {
+      "data": { "sequence": { "start": 0, "stop": 12.6, "step": 0.1 }, "as": "x" },
+      "transform": [{ "calculate": "sin(datum.x)", "as": "y" }],
+      "mark": "line",
+      "encoding": {
+        "x": {"field": "x", "type": "quantitative", "title": "X-axis"},
+        "y": {"field": "y", "type": "quantitative", "title": "Y-axis"}
+      }
+    },
+    {
+      "data": { "values": [{"x": 3.14, "y": 0}] },
+      "mark": "point",
+      "encoding": {
+        "x": {"field": "x", "type": "quantitative"},
+        "y": {"field": "y", "type": "quantitative"},
+        "size": {"value": 100},
+        "color": {"value": "red"}
+      }
+    }
+  ]
+}
+
+Now, generate the complete Vega-Lite JSON for the user's request.`;
 }

@@ -10,6 +10,8 @@
     <script src="https://cdn.jsdelivr.net/npm/katex@0.16.10/dist/contrib/auto-render.min.js" integrity="sha384-43gviWU0YVjaDtb/GhzOouOXtZMP/7XUzwPTstBeZFe/+rCMvRwr4yROQP43s0Xk" crossorigin="anonymous"></script>    
     <script src="https://cdnjs.cloudflare.com/ajax/libs/mathjs/12.4.2/math.js"></script>
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
+    <script src="https://cdn.jsdelivr.net/npm/vega-lite@5"></script>
             <style>
                 
                 * {
@@ -1859,6 +1861,10 @@
             </div>
         </div>
         <div style="display: flex; gap: 15px;">
+            <button class="new-topic-btn" id="graphLabBtn" style="background: linear-gradient(135deg, #10b981 0%, #059669 100%);">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="M18.7 8a6 6 0 0 0-8.4 0L3 18"/><path d="M12 12a3 3 0 0 0 4.2 0L21 6"/></svg>
+                Graph Lab
+            </button>
             <button class="new-topic-btn" id="newTopicBtn">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14m-7-7h14"/></svg>
                 Learn a new topic
@@ -1977,7 +1983,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script type="module">
-import { formatVisualAssetsForContext, getLineageContent, buildTreeStructureString, getInPlaceElaborationPrompt, getStandardElaborationPrompt, getStemElaborationPrompt, getNewSubtopicsPrompt, getSyllabusPrompt, getPrefetchPrompt, getTimelineElaborationPrompt, getQuestionDispatcherPrompt } from './prompt-builder.js';
+import { formatVisualAssetsForContext, getLineageContent, buildTreeStructureString, getInPlaceElaborationPrompt, getStandardElaborationPrompt, getStemElaborationPrompt, getNewSubtopicsPrompt, getSyllabusPrompt, getPrefetchPrompt, getTimelineElaborationPrompt, getQuestionDispatcherPrompt, getVegaLiteSpecPrompt } from './prompt-builder.js';
 function triggerMathRendering(element) {
     // This is a KaTeX function that will find and render math expressions.
     // We need to import an additional script for it to work.
@@ -5742,6 +5748,107 @@ document.getElementById('checkVerificationBtn').addEventListener('click', () => 
 document.getElementById('signOutFromVerifyBtn').addEventListener('click', () => {
     auth.signOut();
 });
+// --- NEW: VEGA-LITE GRAPH LAB LOGIC ---
+
+// 1. Get references to all the new HTML elements
+const graphLabBtn = document.getElementById('graphLabBtn');
+const graphLabModal = document.getElementById('graphLabModal');
+const cancelGraphBtn = document.getElementById('cancelGraphBtn');
+const submitGraphBtn = document.getElementById('submitGraphBtn');
+const graphPromptInput = document.getElementById('graphPromptInput');
+
+const graphDisplayModal = document.getElementById('graphDisplayModal');
+const closeGraphDisplayBtn = document.getElementById('closeGraphDisplayBtn');
+const vegaContainer = document.getElementById('vegaContainer');
+
+// 2. Add event listeners to control the modals
+graphLabBtn.addEventListener('click', () => graphLabModal.classList.add('active'));
+cancelGraphBtn.addEventListener('click', () => graphLabModal.classList.remove('active'));
+closeGraphDisplayBtn.addEventListener('click', () => graphDisplayModal.classList.remove('active'));
+
+// Close modals if the user clicks on the dark overlay
+graphLabModal.addEventListener('click', (e) => {
+    if (e.target === graphLabModal) graphLabModal.classList.remove('active');
+});
+graphDisplayModal.addEventListener('click', (e) => {
+    if (e.target === graphDisplayModal) graphDisplayModal.classList.remove('active');
+});
+
+
+// 3. Handle the "Generate Graph" button click
+submitGraphBtn.addEventListener('click', async () => {
+    const userPrompt = graphPromptInput.value.trim();
+    if (!userPrompt) {
+        alert("Please describe the graph you want to create.");
+        return;
+    }
+
+    // Show a loading state on the button
+    submitGraphBtn.disabled = true;
+    submitGraphBtn.innerHTML = '<span class="loading-spinner"></span> Generating...';
+
+    try {
+        // Use the new prompt builder function
+        const prompt = getVegaLiteSpecPrompt(userPrompt);
+
+        const vegaConversation = [
+            { role: "system", content: "You are a Vega-Lite specification generator." },
+            { role: "user", content: prompt }
+        ];
+
+        const response = await fetch(BACKEND_URL + '/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: vegaConversation })
+        });
+
+        if (!response.ok) throw new Error('API request failed');
+
+        const result = await response.json();
+        const botResponseText = result.choices[0].message.content;
+
+        // Use the robust parser to get the JSON spec
+        const vegaSpec = sanitizeAndParseJson(botResponseText);
+
+        // Hide the input modal and show the graph display modal
+        graphLabModal.classList.remove('active');
+        graphDisplayModal.classList.add('active');
+
+        // Render the chart using the spec from the AI
+        renderVegaLiteChart('vegaContainer', vegaSpec);
+
+    } catch (error) {
+        console.error("Error generating Vega-Lite spec:", error);
+        showError("Sorry, there was an error creating the graph. The AI may have returned an invalid format. Please try again.");
+    } finally {
+        // Reset the button state
+        submitGraphBtn.disabled = false;
+        submitGraphBtn.textContent = 'Generate Graph';
+    }
+});
+
+
+/**
+ * Renders a Vega-Lite chart into a specified container.
+ * @param {string} containerId The ID of the div where the chart should be rendered.
+ * @param {object} spec The Vega-Lite JSON specification.
+ */
+async function renderVegaLiteChart(containerId, spec) {
+    const container = document.getElementById(containerId);
+    if (!container) {
+        console.error(`Container with id "${containerId}" not found.`);
+        return;
+    }
+    
+    try {
+        // Use the vegaEmbed library function to render the chart
+        await vegaEmbed(`#${containerId}`, spec, { "actions": true });
+        console.log("Vega-Lite chart rendered successfully.");
+    } catch (error) {
+        console.error("Vega-Lite Rendering Error:", error);
+        container.innerHTML = `<p style="color: #dc2626; font-weight: 500;">Could not render the graph. The specification provided by the AI was invalid.</p><pre style="white-space: pre-wrap; background: #f3f4f6; padding: 10px; border-radius: 8px; margin-top: 10px;">${JSON.stringify(spec, null, 2)}</pre>`;
+    }
+}
     </script>
     <!-- New Topic Modal -->
 <div class="modal-overlay" id="newTopicModal">
@@ -5835,5 +5942,30 @@ document.getElementById('signOutFromVerifyBtn').addEventListener('click', () => 
         </div>
     </div>
 </div>
+<!-- Add this HTML at the end of your <body>, with the other modals -->
+    <div class="modal-overlay" id="graphLabModal">
+        <div class="modal-content" style="max-width: 600px;">
+            <h2>Vega-Lite Graph Lab</h2>
+            <p style="margin: 15px 0 25px; font-size: 16px; color: #4b5563; text-align: center;">
+                Describe the graph you want to create in plain English.
+            </p>
+            <div class="input-wrapper">
+                <textarea id="graphPromptInput" class="styled-textarea" placeholder="e.g., 'A sine wave and a cosine wave, with a dotted line showing their intersection at pi/4.'"></textarea>
+            </div>
+            <div class="modal-actions" style="margin-top: 25px;">
+                <button class="modal-btn cancel" id="cancelGraphBtn">Cancel</button>
+                <button class="modal-btn submit" id="submitGraphBtn">Generate Graph</button>
+            </div>
+        </div>
+    </div>
+    
+    <!-- This is the modal that will display the final rendered graph -->
+    <div class="modal-overlay" id="graphDisplayModal">
+        <div class="modal-content" style="max-width: 800px; width: 90%;">
+            <span class="close-modal-btn" id="closeGraphDisplayBtn">&times;</span>
+            <h2>Generated Graph</h2>
+            <div id="vegaContainer" style="width: 100%; margin-top: 20px;"></div>
+        </div>
+    </div>
 </body>
 </html>
