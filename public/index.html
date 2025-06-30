@@ -2402,7 +2402,14 @@ function renderHybridTimeline(container, hybridData) {
  * @param {string} rawText The raw text response from the AI.
  * @returns {object} The parsed JavaScript object.
  */
-function sanitizeAndParseJson(rawText) {
+/**
+ * The final, most robust version of the JSON sanitizer.
+ * This handles comments and backslashes, while letting the parser handle standard whitespace.
+ * @param {string} rawText The raw text response from the AI.
+ * @returns {object} The parsed JavaScript object.
+ */
+ function sanitizeAndParseJson(rawText) {
+    // We keep this log because it's still very useful for debugging!
     console.log("--- RAW AI RESPONSE ---", rawText);
 
     const startIndex = rawText.indexOf('{');
@@ -2415,22 +2422,18 @@ function sanitizeAndParseJson(rawText) {
 
     let jsonString = rawText.substring(startIndex, endIndex + 1);
 
-    // Step 1: Remove comments
+    // Step 1: Remove comments (this is still a good idea)
     jsonString = jsonString.replace(/\/\/.*/g, '');
     jsonString = jsonString.replace(/\/\*[\s\S]*?\*\//g, '');
-    
-    // --- THIS IS THE NEW FIX ---
-    // Step 2: Replace literal newlines within the string with their escaped version
-    jsonString = jsonString.replace(/\n/g, '\\n');
-    // -------------------------
 
-    // Step 3: Sanitize backslashes (this remains the same)
+    // The problematic line that replaced all newlines has been REMOVED.
+    
+    // Step 2: Sanitize backslashes (this is also still necessary)
     const sanitizedString = jsonString.replace(/\\/g, '\\\\');
 
     console.log("--- FINAL STRING TO PARSE ---", sanitizedString);
 
     try {
-        // The final parse attempt
         return JSON.parse(sanitizedString);
     } catch (e) {
         console.error("---!!!--- FINAL JSON PARSING FAILED ---!!!---");
