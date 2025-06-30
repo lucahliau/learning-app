@@ -311,45 +311,53 @@ USER'S REQUEST: "${userPrompt}"
 
 --- YOUR TASK ---
 
-1.  **Analyze the Request:** Carefully read the user's request to understand all the desired components.
-2.  **Generate Base Data:** Create the base data needed for the primary lines or points. For functions, use a "sequence" transform. For discrete points, use an inline "values" array.
-3.  **Construct the Vega-Lite JSON:**
-    - Your response MUST be ONLY the JSON object, with no other text.
-    - Use a layered approach. The top-level spec must have a "layer" array.
-    - Title the graph and axes appropriately.
+1.  **Analyze the Request:** Carefully read the user's request to understand all the desired components: functions, points, labels, colors, shaded areas, intercepts, tangent lines, etc.
+2.  **Generate Data:** You must generate the necessary data within the Vega-Lite spec.
+    - For functions (e.g., "a sine wave from 0 to 10"), create data using a "sequence" transform.
+    - For scatter plots or specific points, create an inline dataset (e.g., { "values": [{"x": 1, "y": 2}, ...] }).
+3.  **Construct the Vega-Lite JSON:** Create a complete Vega-Lite specification.
+    - Your response MUST be ONLY the JSON object. Do not include "\`\`\`json" or any other conversational text.
+    - Use a layered approach. The top-level spec should have a "layer" array containing different marks (lines, points, text, areas).
+    - Assume a standard X-Y axis plot (first quadrant, where x and y are positive) unless the user's request (e.g., "a sine wave from -pi to pi") implies otherwise.
+    - Title the graph and axes appropriately based on the user's request.
+    4.  **CRITICAL RULE: Use Calculation, Not Hardcoding:** For any feature that is mathematically derived from another (e.g., intersections, tangent lines, areas between curves), you **MUST** use Vega-Lite's "transform" array with "calculate" expressions. **Do not pre-calculate the values and hardcode them.** The spec must be self-contained and reproducible. Start with base layers for the main lines, then add new layers that use transforms to create the derived graphics.
 
-4.  **CRITICAL RULE: Use Calculation, Not Hardcoding:** For any feature that is mathematically derived from another (e.g., intersections, tangent lines, areas between curves), you **MUST** use Vega-Lite's "transform" array with "calculate" expressions. **Do not pre-calculate the values and hardcode them.** The spec must be self-contained and reproducible. Start with base layers for the main lines, then add new layers that use transforms to create the derived graphics.
 
---- ADVANCED EXAMPLE: Shading the area between y=x and y=x+1 ---
+--- VEGA-LITE HINTS & CAPABILITIES ---
+- **Lines & Curves:** Use \`"mark": "line"\`.
+- **Plotted Points:** Use \`"mark": "point"\` or \`"mark": "circle"\`.
+- **Dotted Lines:** In a line's encoding, add \`"strokeDash": {"value": [5, 5]}\`.
+- **Shaded Areas:** Use \`"mark": {"type": "area", "opacity": 0.3}\`. For the area between two lines, you may need a "transform" to calculate the upper and lower bounds.
+- **Labels on Graph:** Add a new layer with \`"mark": "text"\`. Use the "text" encoding channel.
+- **Line of Best Fit:** Add a new layer and apply a "regression" transform to the data.
+- **Tangents/Intercepts:** You must calculate the data points for these lines yourself and add them as a separate line layer.
+
+EXAMPLE of a layered spec for "a sine wave with a point at pi":
 {
   "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
-  "description": "Shading the area between two lines.",
-  "data": { "sequence": {"start": 0, "stop": 10, "step": 0.2}, "as": "x" },
+  "description": "A layered plot of a sine wave and a point.",
   "layer": [
     {
+      "data": { "sequence": { "start": 0, "stop": 12.6, "step": 0.1 }, "as": "x" },
+      "transform": [{ "calculate": "sin(datum.x)", "as": "y" }],
       "mark": "line",
-      "transform": [{ "calculate": "datum.x", "as": "y" }],
-      "encoding": { "x": {"field": "x"}, "y": {"field": "y"} }
+      "encoding": {
+        "x": {"field": "x", "type": "quantitative", "title": "X-axis"},
+        "y": {"field": "y", "type": "quantitative", "title": "Y-axis"}
+      }
     },
     {
-      "mark": "line",
-      "transform": [{ "calculate": "datum.x + 1", "as": "y" }],
-      "encoding": { "x": {"field": "x"}, "y": {"field": "y"} }
-    },
-    {
-      "mark": {"type": "area", "opacity": 0.3},
-      "transform": [
-        { "calculate": "datum.x", "as": "lower_y" },
-        { "calculate": "datum.x + 1", "as": "upper_y" }
-      ],
+      "data": { "values": [{"x": 3.14, "y": 0}] },
+      "mark": "point",
       "encoding": {
         "x": {"field": "x", "type": "quantitative"},
-        "y": {"field": "lower_y", "type": "quantitative", "title": "y-value"},
-        "y2": {"field": "upper_y"}
+        "y": {"field": "y", "type": "quantitative"},
+        "size": {"value": 100},
+        "color": {"value": "red"}
       }
     }
   ]
 }
 
-Now, generate the complete and mathematically correct Vega-Lite JSON for the user's request.`;
+Now, generate the complete Vega-Lite JSON for the user's request.`;
 }
