@@ -1977,9 +1977,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script type="module">
-import { formatVisualAssetsForContext, getLineageContent, buildTreeStructureString, getInPlaceElaborationPrompt, getStandardElaborationPrompt, getStemElaborationPrompt, getNewSubtopicsPrompt, getSyllabusPrompt } from './prompt-builder.js';
-
-
+import { formatVisualAssetsForContext, getLineageContent, buildTreeStructureString, getInPlaceElaborationPrompt, getStandardElaborationPrompt, getStemElaborationPrompt, getNewSubtopicsPrompt, getSyllabusPrompt, getPrefetchPrompt, getTimelineElaborationPrompt } from './prompt-builder.js';
 function triggerMathRendering(element) {
     // This is a KaTeX function that will find and render math expressions.
     // We need to import an additional script for it to work.
@@ -2309,42 +2307,22 @@ function renderHybridTimeline(container, hybridData) {
 
     for (let i = 0; i < maxRetries; i++) {
         try {
-            const topic = node.fullTitle;
-            let contextPrompt = '';
-            if (node.parent && node.parent.id !== 'root') {
-                contextPrompt = `In the context of "${node.parent.fullTitle}", `;
-            }
+            const rootNode = treeStructure; // Get the root of the current topic
+            const contextPrompt = (node.parent && node.parent.id !== 'root')
+                ? ` In the context of "${node.parent.fullTitle}", `
+                : '';
 
-            const prefetchPrompt = `You are an expert educator who carries out tasks with precision and speed. Your task is to explain the topic "${topic}"${contextPrompt}.
-        
-Your response MUST be a single, valid JSON object with no other text before or after it. All keys and string values MUST use double quotes ("). Do NOT use unescaped newline characters.
-
-1.  In the "explanation" value, provide a detailed, non-generic explanation of the topic with at least 2 paragraphs. For topics that are mathematical in nature, **For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters. For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters like $...$ or $$...$$**
-2.  In the "definitions" value, provide an array of objects. For each object, identify a technical term from your explanation and provide a simple, one-sentence definition for it in the context of the topic. Only add/define these technical terms if they are truly technical and not straightforward, and their definition is specific to the context. Terms like focus, endurance, mental toughness which are obvious should not be included. 
-3.  In the "visualAssets" value, (this key is optional), analyze your explanation. If a visual aid could significantly enhance understanding, add this key. If not, OMIT this key entirely.
-    * If included, it must be an array of objects. Each object represents one visual asset.
-    * For each asset, provide a "type" and "data".
-
-Here are the available asset types and their required data formats:
-
-* **For a function graph (e.g., for math equations):**
-    * "type": "implicit_plotter"
-    * "data": (String) A single string with one or more equations separated by semicolons (e.g., "y=x^2; y=sin(x)").
-
-* **For a timeline (for historical events, periods, or both):**
-    * "type": "hybrid_timeline"
-    * "data": (Array of Objects) An array of items. Each item must have a "type" key ('period' or 'event').
-        * If type is 'period', include "name", "startStr", and "endStr".
-        * If type is 'event', include "name" and "dateStr".
-        * Example: [{ "type": "period", "name": "Roman Republic", "startStr": "509 BC", "endStr": "27 BC" }, { "type": "event", "name": "Caesar's Assassination", "dateStr": "44 BC" }]
-
-* **For a bar chart:**
-    * "type": "bar_chart"
-    * "data": (String) A multi-line string with each line in "Label: Value" format.
-
-* **For a pie chart:**
-    * "type": "pie_chart"
-    * "data": (String) A multi-line string with each line in "Label: Percentage" format.`;
+            // Assemble the full context object for the prompt
+            const promptParams = {
+                topicTitle: rootNode.fullTitle,
+                sophistication: rootNode.sophistication,
+                currentNodeTitle: node.fullTitle,
+                journeyStructure: buildTreeStructureString(rootNode, node.id),
+                lineageContent: getLineageContent(node.parent), // Use parent for prior context
+                contextPrompt: contextPrompt
+            };
+            
+            const prefetchPrompt = getPrefetchPrompt(promptParams);
 
             const prefetchConversation = [
                 { role: "system", content: "You are an educational assistant." },
@@ -2357,7 +2335,7 @@ Here are the available asset types and their required data formats:
                 body: JSON.stringify({ messages: prefetchConversation })
             });
 
-            if (!response.ok) throw new Error(`Prefetch API failed for "${topic}"`);
+            if (!response.ok) throw new Error(`Prefetch API failed for "${node.fullTitle}"`);
 
             const data = await response.json();
             const botResponseText = data.choices[0].message.content;
@@ -4309,16 +4287,52 @@ async function elaborateOnCurrent() {
  * @param {boolean} [generateNewCards=false] - If true, treat it as a new question and generate sub-topic cards.
  * @returns {Promise<boolean>} - True on success, false on failure.
  */
-async function elaborateOnTopic(targetNode, generateNewCards = false) {
+ async function elaborateOnTopic(targetNode, generateNewCards = false) {
     showSkeletonLoader();
-    const topicRootNode = treeStructure;
-    const topicCategory = topicRootNode.category;
-    const isStemTopic = topicCategory === 'Science' || topicCategory === 'Mathematics';
+    const rootNode = treeStructure;
+    let elaborationPrompt = '';
 
-    // --- END OF EDITED BLOCK ---
+    if (generateNewCards) {
+        // This part for handling new questions remains the same.
+        const parentOfQuestion = targetNode.parent;
+        elaborationPrompt = getNewSubtopicsPrompt({
+            topicTitle: rootNode.fullTitle,
+            sophistication: rootNode.sophistication || 'Detailed',
+            journeyStructure: buildTreeStructureString(rootNode, parentOfQuestion.id),
+            lineageContent: getLineageContent(parentOfQuestion),
+            userQuestion: targetNode.fullTitle,
+            currentNodeTitle: parentOfQuestion.fullTitle
+        });
+
+    } else {
+        // --- THIS IS THE UPDATED BLOCK ---
+        // This path is for expanding a standard topic card.
+        const topicCategory = rootNode.category;
+        const isStemTopic = topicCategory === 'Science' || topicCategory === 'Mathematics';
+        
+        // This is the object containing all the context details.
+        const promptParams = {
+            topicTitle: rootNode.fullTitle,
+            sophistication: rootNode.sophistication || 'Detailed',
+            currentNodeTitle: targetNode.fullTitle,
+            journeyStructure: buildTreeStructureString(rootNode, targetNode.id),
+            lineageContent: getLineageContent(targetNode)
+        };
+
+        if (isStemTopic) {
+            elaborationPrompt = getStemElaborationPrompt(promptParams);
+        } else {
+            // Add the simple context prompt for non-STEM topics
+            promptParams.contextPrompt = (targetNode.parent && targetNode.parent.id !== 'root')
+                ? `In the context of "${targetNode.parent.fullTitle}", `
+                : '';
+            elaborationPrompt = getStandardElaborationPrompt(promptParams);
+        }
+    }
 
     showLoading(true);
 
+    // The rest of the function (API call, response handling) remains the same.
     try {
         conversationHistory.push({ role: "user", content: elaborationPrompt });
         pruneConversationHistory();
@@ -4337,7 +4351,7 @@ async function elaborateOnTopic(targetNode, generateNewCards = false) {
 
         let parsed;
         if (generateNewCards) {
-            parsed = { overview: `Here are some deeper areas to explore.`, sections: parseSyllabusResponse(botResponse), definitions: [] };
+            parsed = { overview: `Here are some deeper areas to explore.`, sections: universalParseSyllabus(botResponse), definitions: [] };
             targetNode.children = [];
             parsed.sections.forEach(section => {
                 createTreeNode(section.title, null, targetNode, false);
@@ -4345,33 +4359,25 @@ async function elaborateOnTopic(targetNode, generateNewCards = false) {
             targetNode.children.forEach(childNode => {
                 prefetchNodeContent(childNode);
             });
-
-        // ... inside the standard content branch of elaborateOnTopic (else block)
-    } else {
+        } else {
             try {
-                // Use the new sanitizer and parser
                 const structuredResponse = sanitizeAndParseJson(botResponse);
-
                 const explanation = structuredResponse.explanation || "No explanation provided.";
                 const definitions = structuredResponse.definitions || [];
                 const visualAssets = structuredResponse.visualAssets || [];
-
-                // Call the new, more powerful parseResponse function
                 parsed = parseResponse(explanation, definitions);
                 parsed.visualAssets = visualAssets;
                 parsed.showTellMeMore = true;
-
             } catch (e) {
                 console.error("Failed to parse structured response from AI:", e);
-                // Fallback for catastrophic failure
                 parsed = parseResponse(botResponse, []);
             }
         }
 
         targetNode.content = parsed;
         navigateToNode(targetNode.id);
-        saveTopicsToFirestore();
-
+        await saveTopicsToFirestore();
+        return true;
 
     } catch (error) {
         console.error("Error in elaborateOnTopic:", error);
@@ -4380,7 +4386,6 @@ async function elaborateOnTopic(targetNode, generateNewCards = false) {
     } finally {
         showLoading(false);
     }
-    return true;
 }
 
         // Send message
@@ -4396,34 +4401,100 @@ async function elaborateOnTopic(targetNode, generateNewCards = false) {
 
         // Ask question
         async function askQuestion(question) {
-            showLoading(true);
-            
-            try {
-                                // Create a new top-level node for the user's question
-                const newNode = createTreeNode(
-                    question.length > 50 ? question.substring(0, 50) + '...' : question,
-                    null, // Content is initially null
-                    currentTreeNode,
-                    true
-                );
-                newNode.fullTitle = question;
+    showLoading(true);
+    const rootNode = treeStructure;
+    const currentNode = currentTreeNode;
 
-                // Set the context immediately
-                currentContext = { topic: question, subtopic: null, fullContent: null };
+    // Case A vs Case B: Does the current node have cards?
+    const currentNodeHasCards = currentNode.content && currentNode.content.sections && currentNode.content.sections.length > 0;
 
-                // Now, call elaborateOnTopic to get the sub-topic cards for the question.
-                // The "true" flag tells it to generate new cards.
-                await elaborateOnTopic(newNode, true);
+    try {
+        const dispatcherPrompt = getQuestionDispatcherPrompt({
+            topicTitle: rootNode.fullTitle,
+            sophistication: rootNode.sophistication,
+            journeyStructure: buildTreeStructureString(rootNode, currentNode.id),
+            lineageContent: getLineageContent(currentNode),
+            userQuestion: question,
+            currentNodeTitle: currentNode.fullTitle,
+            currentNodeHasCards: currentNodeHasCards
+        });
 
-                updatePlaceholder(true);
-                } catch (error) {
-                console.error("Error in askQuestion:", error);
-                // Display the specific error message we created in our check.
-                showError(error.message || 'Failed to get response. Please check your connection.');
-            } finally {
-                showLoading(false);
+        // This conversation is temporary for the dispatcher and won't be saved to the main history.
+        const dispatcherConversation = [
+            { role: "system", content: "You are an educational assistant." },
+            { role: "user", content: dispatcherPrompt }
+        ];
+
+        const response = await fetch(BACKEND_URL + '/chat', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ messages: dispatcherConversation })
+        });
+
+        if (!response.ok) throw new Error('Dispatcher API request failed');
+
+        const result = await response.json();
+        const botResponseText = result.choices[0].message.content;
+        const dispatcherResponse = sanitizeAndParseJson(botResponseText);
+
+        const { responseType, location, content } = dispatcherResponse;
+
+        // --- Handle the AI's decision ---
+
+        if (responseType === 'subtopics') {
+            // Case 2: Create a new node with sub-topic cards.
+            const newNode = createTreeNode(question, null, currentNode, true);
+            const syllabusSections = universalParseSyllabus(content.syllabus);
+            newNode.content = {
+                 overview: `Here are some deeper areas to explore regarding your question about "${question}".`,
+                 sections: syllabusSections,
+                 definitions: []
+            };
+            syllabusSections.forEach(section => createTreeNode(section.title, null, newNode, false));
+            newNode.children.forEach(childNode => prefetchNodeContent(childNode));
+            navigateToNode(newNode.id);
+
+        } else if (responseType === 'explanation') {
+            const parsedContent = parseResponse(content.explanation, content.definitions);
+            parsedContent.visualAssets = content.visualAssets || [];
+            parsedContent.showTellMeMore = true;
+
+            if (location === 'inline' && !currentNodeHasCards) {
+                // Case 1.1: Append to the current node's content.
+                const separator = `<hr style="border: none; border-top: 1px solid #e5e7eb; margin: 25px 0;">`;
+                const titleHeader = `<h3>${question}</h3>`; // Add the user's question as a title
+                const highlightedNewText = applyTermHighlighting(parsedContent.overview, parsedContent.definitions);
+                
+                currentNode.content.overview += separator + titleHeader + highlightedNewText;
+                
+                // Also merge definitions and assets
+                if (content.definitions.length > 0) {
+                    currentNode.content.definitions.push(...content.definitions);
+                }
+                if (content.visualAssets && content.visualAssets.length > 0) {
+                     if (!currentNode.content.visualAssets) currentNode.content.visualAssets = [];
+                     currentNode.content.visualAssets.push(...content.visualAssets);
+                }
+
+                displayContent(currentNode); // Re-render the current node
+
+            } else {
+                // Case 1 (from Case A) or Case 1.2 (from Case B): Create a new node for the explanation.
+                const newNode = createTreeNode(question, parsedContent, currentNode, true);
+                navigateToNode(newNode.id);
             }
         }
+        
+        await saveTopicsToFirestore();
+        document.getElementById('chatInput').value = ''; // Clear input
+
+    } catch (error) {
+        console.error("Error in askQuestion:", error);
+        showError(error.message || 'Failed to get response. Please check your connection.');
+    } finally {
+        showLoading(false);
+    }
+}
 
         // Show loading state
         function showLoading(isLoading) {
@@ -5320,23 +5391,21 @@ function handleTimelineCardClick(clickedItem, allItems) {
     const overallTopic = currentTreeNode.fullTitle;
     const eventName = clickedItem.name;
     const otherEvents = allItems.filter(item => item.name !== eventName).map(item => item.name).join(', ');
+    const rootNode = treeStructure;
 
-    // --- PROMPT CHANGE: We now ask for "explanation" AND "definitions" ---
-    const prompt = `In the context of learning about "${overallTopic}", your task is to explain the specific event or period: "${eventName}". For context, other related events on the timeline include: ${otherEvents}.
+    // Assemble the full context object for the prompt
+    const promptParams = {
+        overallTopic: rootNode.fullTitle,
+        eventName: eventName,
+        otherEvents: otherEvents,
+        sophistication: rootNode.sophistication,
+        // The "current node" is the one displaying the timeline when the user clicks
+        currentNodeTitle: currentTreeNode.fullTitle,
+        journeyStructure: buildTreeStructureString(rootNode, currentTreeNode.id),
+        lineageContent: getLineageContent(currentTreeNode)
+    };
 
-Your response MUST be a single, valid JSON object with no other text before or after it.
-The JSON object must have two keys: "explanation" and "definitions".
-
-1.  In the "explanation" value, provide a detailed, 2-3 paragraph explanation of "${eventName}". For any mathematical equations or variables, enclose them in LaTeX delimiters and escape backslashes (e.g., "\\\\sqrt{x}").
-2.  In the "definitions" value, provide an array of objects. For each object, identify a technical term from your explanation and provide a simple, one-sentence definition for it. Only define terms that are truly technical and not common knowledge.
-
-Example JSON structure:
-{
-  "explanation": "The Battle of Hastings in 1066 was a pivotal moment in English history...",
-  "definitions": [
-    {"term": "Housecarls", "definition": "Elite household troops who served as the personal bodyguard of Anglo-Saxon kings."}
-  ]
-}`;
+    const prompt = getTimelineElaborationPrompt(promptParams);
 
     try {
         const tempConversation = [
@@ -5353,27 +5422,21 @@ Example JSON structure:
         if (!response.ok) throw new Error('API request failed');
 
         const result = await response.json();
-        // ... inside elaborateOnTimelineEvent
         const botResponseText = result.choices[0].message.content;
 
-        // Use the new sanitizer to reliably get the JSON object
         const structuredResponse = sanitizeAndParseJson(botResponseText);
-
-        // --- LOGIC CHANGE: We now extract both keys from the response ---
         const explanation = structuredResponse.explanation || "No explanation provided.";
         const definitions = structuredResponse.definitions || [];
 
-        // The parseResponse function is now given the definitions to process.
         const parsed = parseResponse(explanation, definitions);
         parsed.showTellMeMore = true; 
 
-        // Create a new node for this elaboration
         const newNode = createTreeNode(eventName, parsed, currentTreeNode);
-        newNode.isTimelineElaboration = true; // Add a special flag
+        newNode.isTimelineElaboration = true;
 
         await saveTopicsToFirestore();
-        updateTreeVisualization(); // Update the map to show the new node
-        navigateToNode(newNode.id); // Navigate to the new content
+        updateTreeVisualization();
+        navigateToNode(newNode.id);
 
     } catch (error) {
         console.error("Error elaborating on timeline event:", error);
