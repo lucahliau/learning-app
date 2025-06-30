@@ -2390,8 +2390,21 @@ function renderHybridTimeline(container, hybridData) {
  * @param {string} rawText The raw text response from the AI.
  * @returns {object} The parsed JavaScript object.
  */
+/**
+ * A robust function to find, clean, and parse a JSON object from a raw text string.
+ * This version includes debugging logs.
+ * @param {string} rawText The raw text response from the AI.
+ * @returns {object} The parsed JavaScript object.
+ */
+ /**
+ * The final, most robust version of the JSON sanitizer.
+ * This handles comments, backslashes, AND unescaped control characters.
+ * @param {string} rawText The raw text response from the AI.
+ * @returns {object} The parsed JavaScript object.
+ */
 function sanitizeAndParseJson(rawText) {
-    // Find the JSON block, ignoring conversational text and code fences like ```json
+    console.log("--- RAW AI RESPONSE ---", rawText);
+
     const startIndex = rawText.indexOf('{');
     const endIndex = rawText.lastIndexOf('}');
 
@@ -2402,24 +2415,27 @@ function sanitizeAndParseJson(rawText) {
 
     let jsonString = rawText.substring(startIndex, endIndex + 1);
 
-    // --- NEW FIX: Strip out comments from the JSON string ---
-    // Remove single-line comments (// ...)
+    // Step 1: Remove comments
     jsonString = jsonString.replace(/\/\/.*/g, '');
-    // Remove multi-line comments (/* ... */)
     jsonString = jsonString.replace(/\/\*[\s\S]*?\*\//g, '');
-    // --------------------------------------------------------
+    
+    // --- THIS IS THE NEW FIX ---
+    // Step 2: Replace literal newlines within the string with their escaped version
+    jsonString = jsonString.replace(/\n/g, '\\n');
+    // -------------------------
 
-    // CRITICAL FIX for backslashes (this part remains the same)
+    // Step 3: Sanitize backslashes (this remains the same)
     const sanitizedString = jsonString.replace(/\\/g, '\\\\');
 
+    console.log("--- FINAL STRING TO PARSE ---", sanitizedString);
+
     try {
+        // The final parse attempt
         return JSON.parse(sanitizedString);
     } catch (e) {
         console.error("---!!!--- FINAL JSON PARSING FAILED ---!!!---");
-        console.error("The code could not parse the following sanitized string:");
-        console.log(sanitizedString);
         console.error("The specific error was:", e.message);
-        throw e; // Re-throw the error
+        throw e;
     }
 }
 // ==================== END: REPLACE THIS FUNCTION ====================
