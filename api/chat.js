@@ -28,7 +28,7 @@ app.post('/api/chat', async (req, res) => {
         }
 
         const requestData = {
-            model: 'o1-pro',
+            model: 'o1',
             messages: messages,
         };
 
