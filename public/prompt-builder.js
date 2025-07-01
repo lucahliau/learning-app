@@ -305,13 +305,13 @@ Analyze the user's question and choose the best response format. Your response M
 Do not add any other text before or after the JSON object.`;
 }
 export function getChartJsCodePrompt(userPrompt) {
-  return `You are an expert data visualization assistant specializing in creating Chart.js (v4) code. Your task is to convert a user's natural language request into a single, valid, runnable block of JavaScript code.
+  return `You are an expert data visualization assistant specializing in creating Chart.js (v4) code. Your task is to convert a user's natural language request into a single, valid, runnable block of JavaScript code that accurately and precisely represents the user's request.
 
 USER'S REQUEST: "${userPrompt}"
 
 --- YOUR TASK & RULES ---
 
-1.  **Analyze Request Type:** The user's request might be **descriptive** (e.g., 'a sine wave from 0 to 10') or **interpretive** (e.g., 'a supply and demand curve' or 'an elasticity curve'). For interpretive requests, you MUST generate appropriate, illustrative data and the corresponding chart structure.
+1.  **Analyze Request Type:** The user's request might be **descriptive** (e.g., 'a sine wave from 0 to 10') or **interpretive** (e.g., 'a supply and demand curve' or 'an elasticity curve'). For descriptive requests you should be unfailingly accurate. For interpretive requests, you MUST generate appropriate, illustrative data and the corresponding chart structure.
 
 2.  **Output Format:**
   * Your response MUST be ONLY a single JavaScript code block, wrapped in \`\`\`javascript ... \`\`\`.
