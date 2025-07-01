@@ -28,7 +28,7 @@ app.post('/api/chat', async (req, res) => {
         }
 
         const requestData = {
-            model: 'gpt-4o-mini',
+            model: 'o4-mini-high',
             messages: messages,
         };
 
