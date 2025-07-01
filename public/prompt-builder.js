@@ -304,97 +304,95 @@ Analyze the user's question and choose the best response format. Your response M
 
 Do not add any other text before or after the JSON object.`;
 }
-export function getVegaLiteSpecPrompt(userPrompt) {
-    return `You are an expert data visualization assistant specializing in creating Vega-Lite (v5) specifications. Your task is to convert a user's natural language request into a single, valid Vega-Lite JSON object.
+export function getChartJsCodePrompt(userPrompt) {
+  return `You are an expert data visualization assistant specializing in creating Chart.js (v4) code. Your task is to convert a user's natural language request into a single, valid, runnable block of JavaScript code.
 
 USER'S REQUEST: "${userPrompt}"
 
---- YOUR TASK ---
+--- YOUR TASK & RULES ---
 
-1.  **Analyze the Request:** Carefully read the user's request to understand all the desired components: functions, points, labels, colors, shaded areas, intercepts, tangent lines, etc.
-2.  **Generate Data:** You must generate the necessary data within the Vega-Lite spec.
-    - For functions (e.g., "a sine wave from 0 to 10"), create data using a "sequence" transform.
-    - For scatter plots or specific points, create an inline dataset (e.g., { "values": [{"x": 1, "y": 2}, ...] }).
-3.  **Construct the Vega-Lite JSON:** Create a complete Vega-Lite specification.
-    - Your response MUST be ONLY the JSON object. Do not include "\`\`\`json" or any other conversational text.
-    - Use a layered approach. The top-level spec should have a "layer" array containing different marks (lines, points, text, areas).
-    - Assume a standard X-Y axis plot (first quadrant, where x and y are positive) unless the user's request (e.g., "a sine wave from -pi to pi") implies otherwise.
-    - Title the graph and axes appropriately based on the user's request.
-   4.  **CRITICAL RULE 1: Use Calculation, Not Hardcoding:** For any feature that is mathematically derived from another (e.g., intersections, areas), you **MUST** use Vega-Lite's "transform" array with "calculate" expressions. Do not pre-calculate the values and hardcode them.
+1.  **Analyze Request Type:** The user's request might be **descriptive** (e.g., 'a sine wave from 0 to 10') or **interpretive** (e.g., 'a supply and demand curve' or 'an elasticity curve'). For interpretive requests, you MUST generate appropriate, illustrative data and the corresponding chart structure.
 
-5.  **CRITICAL RULE 2: Always Specify Encoding Type:** In every "encoding" block, every channel definition (like "x", "y", "y2", "text") **MUST** include a "type" property (e.g., "quantitative", "nominal", "ordinal", or "temporal").
+2.  **Output Format:**
+  * Your response MUST be ONLY a single JavaScript code block, wrapped in \`\`\`javascript ... \`\`\`.
+  * Do NOT include any other text, explanations, or conversation before or after the code block.
+  * The code must be self-contained and ready to run.
 
+3.  **Code Structure:**
+  * The code MUST define a new chart instance using \`new Chart(ctx, { ... });\`.
+  * It should accept a canvas context object named \`ctx\`.
+  * The code must be complete, including the chart \`type\`, \`data\` object, and \`options\` object.
 
---- VEGA-LITE HINTS & CAPABILITIES ---
-- **Lines & Curves:** Use \`"mark": "line"\`.
-- **Plotted Points:** Use \`"mark": "point"\` or \`"mark": "circle"\`.
-- **Dotted Lines:** In a line's encoding, add \`"strokeDash": {"value": [5, 5]}\`.
-- **Shaded Areas:** Use \`"mark": {"type": "area", "opacity": 0.3}\`. For the area between two lines, you may need a "transform" to calculate the upper and lower bounds.
-- **Labels on Graph:** Add a new layer with \`"mark": "text"\`. Use the "text" encoding channel.
-- **Line of Best Fit:** Add a new layer and apply a "regression" transform to the data.
-- **Tangents/Intercepts:** You must calculate the data points for these lines yourself and add them as a separate line layer.
---- ADVANCED EXAMPLE: Shading the area between y=x and y=x+1 ---
-{
-  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
-  "description": "Shading the area between two lines.",
-  "data": { "sequence": {"start": 0, "stop": 10, "step": 0.2}, "as": "x" },
-  "layer": [
+4.  **Critical Guardrail Rules:**
+  * **Axis Boundary Rule:** For common economic graphs (like Supply/Demand, PPF, etc.) that exist only in the first quadrant, ensure lines do NOT render below zero. Data points should meet the axes, not cross them. To enforce this, set \`min: 0\` on both the x and y axes scales in the chart options.
+  * **Data Generation Rule:** For interpretive requests, generate your own logical data. For example, a supply curve must have a positive slope, and a demand curve must have a negative slope. For a sine wave, generate the points using a loop.
+  * **Clarity Rule:** Add concise comments to your code explaining the data structure and key configuration options.
+  * **Labeling Rule:** Always provide clear, descriptive labels for the chart title (using the plugins.title option), axes (x and y), and each dataset.
+
+--- EXAMPLE of a desired response for "a supply and demand curve" ---
+\`\`\`javascript
+// Data for the demand curve (downward sloping).
+const demandData = {
+labels: Array.from({ length: 11 }, (_, i) => i * 10), // Prices from 0 to 100
+values: Array.from({ length: 11 }, (_, i) => 100 - i * 10) // Quantities from 100 down to 0
+};
+
+// Data for the supply curve (upward sloping).
+const supplyData = {
+labels: Array.from({ length: 11 }, (_, i) => i * 10), // Prices from 0 to 100
+values: Array.from({ length: 11 }, (_, i) => i * 10) // Quantities from 0 up to 100
+};
+
+new Chart(ctx, {
+type: 'line',
+data: {
+  labels: demandData.labels,
+  datasets: [
     {
-      "mark": "line",
-      "transform": [{ "calculate": "datum.x", "as": "y" }],
-      "encoding": {
-        "x": {"field": "x", "type": "quantitative"},
-        "y": {"field": "y", "type": "quantitative"}
-      }
+      label: 'Demand',
+      data: demandData.values,
+      borderColor: 'rgb(255, 99, 132)',
+      backgroundColor: 'rgba(255, 99, 132, 0.5)',
+      fill: false,
+      tension: 0.1
     },
     {
-      "mark": "line",
-      "transform": [{ "calculate": "datum.x + 1", "as": "y" }],
-      "encoding": {
-        "x": {"field": "x", "type": "quantitative"},
-        "y": {"field": "y", "type": "quantitative"}
-      }
-    },
-    {
-      "mark": {"type": "area", "opacity": 0.3},
-      "transform": [
-        { "calculate": "datum.x", "as": "lower_y" },
-        { "calculate": "datum.x + 1", "as": "upper_y" }
-      ],
-      "encoding": {
-        "x": {"field": "x", "type": "quantitative"},
-        "y": {"field": "lower_y", "type": "quantitative", "title": "y-value"},
-        "y2": {"field": "upper_y", "type": "quantitative"}
-      }
+      label: 'Supply',
+      data: supplyData.values,
+      borderColor: 'rgb(54, 162, 235)',
+      backgroundColor: 'rgba(54, 162, 235, 0.5)',
+      fill: false,
+      tension: 0.1
     }
   ]
-}
-EXAMPLE of a layered spec for "a sine wave with a point at pi":
-{
-  "$schema": "https://vega.github.io/schema/vega-lite/v5.json",
-  "description": "A layered plot of a sine wave and a point.",
-  "layer": [
-    {
-      "data": { "sequence": { "start": 0, "stop": 12.6, "step": 0.1 }, "as": "x" },
-      "transform": [{ "calculate": "sin(datum.x)", "as": "y" }],
-      "mark": "line",
-      "encoding": {
-        "x": {"field": "x", "type": "quantitative", "title": "X-axis"},
-        "y": {"field": "y", "type": "quantitative", "title": "Y-axis"}
-      }
-    },
-    {
-      "data": { "values": [{"x": 3.14, "y": 0}] },
-      "mark": "point",
-      "encoding": {
-        "x": {"field": "x", "type": "quantitative"},
-        "y": {"field": "y", "type": "quantitative"},
-        "size": {"value": 100},
-        "color": {"value": "red"}
-      }
+},
+options: {
+  responsive: true,
+  maintainAspectRatio: false,
+  plugins: {
+    title: {
+      display: true,
+      text: 'Supply and Demand Curve'
     }
-  ]
+  },
+  scales: {
+    x: {
+      title: {
+        display: true,
+        text: 'Quantity'
+      },
+      min: 0 // Prevents the graph from showing negative quantities.
+    },
+    y: {
+      title: {
+        display: true,
+        text: 'Price'
+      },
+      min: 0 // Prevents the graph from showing negative prices.
+    }
+  }
 }
-
-Now, generate the complete Vega-Lite JSON for the user's request.`;
+});
+\`\`\`
+Now, generate the complete Chart.js code for the user's request.`;
 }

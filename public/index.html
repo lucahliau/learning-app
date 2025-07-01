@@ -1982,7 +1982,7 @@
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/9.6.1/firebase-firestore-compat.js"></script>
     <script type="module">
-import { formatVisualAssetsForContext, getLineageContent, buildTreeStructureString, getInPlaceElaborationPrompt, getStandardElaborationPrompt, getStemElaborationPrompt, getNewSubtopicsPrompt, getSyllabusPrompt, getPrefetchPrompt, getTimelineElaborationPrompt, getQuestionDispatcherPrompt, getVegaLiteSpecPrompt } from './prompt-builder.js';
+import { formatVisualAssetsForContext, getLineageContent, buildTreeStructureString, getInPlaceElaborationPrompt, getStandardElaborationPrompt, getStemElaborationPrompt, getNewSubtopicsPrompt, getSyllabusPrompt, getPrefetchPrompt, getTimelineElaborationPrompt, getQuestionDispatcherPrompt, getChartJsCodePrompt } from './prompt-builder.js';
 function triggerMathRendering(element) {
     // This is a KaTeX function that will find and render math expressions.
     // We need to import an additional script for it to work.
@@ -5807,8 +5807,11 @@ graphDisplayModal.addEventListener('click', (e) => {
     if (e.target === graphDisplayModal) graphDisplayModal.classList.remove('active');
 });
 
+// In index.html, inside the <script type="module"> block
 
-// 3. Handle the "Generate Graph" button click
+// This is a global variable to hold our chart instance
+window.myChart = null;
+
 submitGraphBtn.addEventListener('click', async () => {
     const userPrompt = graphPromptInput.value.trim();
     if (!userPrompt) {
@@ -5816,24 +5819,22 @@ submitGraphBtn.addEventListener('click', async () => {
         return;
     }
 
-    // Show a loading state on the button
     submitGraphBtn.disabled = true;
     submitGraphBtn.innerHTML = '<span class="loading-spinner"></span> Generating...';
 
     try {
-        // Use the new prompt builder function
-        const prompt = getVegaLiteSpecPrompt(userPrompt);
+        // Step 1: Use the new prompt builder for Chart.js
+        const prompt = getChartJsCodePrompt(userPrompt);
 
-        const vegaConversation = [
-            { role: "system", content: "You are a Vega-Lite specification generator." },
+        const chartConversation = [
+            { role: "system", content: "You are a Chart.js code generation assistant." },
             { role: "user", content: prompt }
         ];
 
         const response = await fetch(BACKEND_URL + '/chat', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            // Add the 'purpose' key to the JSON body
-            body: JSON.stringify({ messages: vegaConversation, purpose: 'graph_lab' })
+            body: JSON.stringify({ messages: chartConversation, purpose: 'graph_lab' })
         });
 
         if (!response.ok) throw new Error('API request failed');
@@ -5841,26 +5842,45 @@ submitGraphBtn.addEventListener('click', async () => {
         const result = await response.json();
         const botResponseText = result.choices[0].message.content;
 
-        // Use the robust parser to get the JSON spec
-        const vegaSpec = sanitizeAndParseJson(botResponseText);
+        // Step 2: Extract the pure JavaScript code from the AI's response
+        const codeBlockRegex = /```javascript\n([\s\S]*?)\n```/;
+        const match = botResponseText.match(codeBlockRegex);
+        if (!match || !match[1]) {
+            throw new Error("AI did not return a valid JavaScript code block.");
+        }
+        const chartCode = match[1];
 
         // Hide the input modal and show the graph display modal
         graphLabModal.classList.remove('active');
         graphDisplayModal.classList.add('active');
 
-        // Render the chart using the spec from the AI
-        renderVegaLiteChart('vegaContainer', vegaSpec);
+        // Step 3: Display the generated code in the <pre><code> block for the user
+        document.getElementById('chartJsCodeBlock').textContent = chartCode;
+
+        // Step 4: Execute the generated code
+        const canvasId = 'chartJsCanvas';
+        const ctx = document.getElementById(canvasId).getContext('2d');
+        
+        // Destroy the previous chart instance if it exists
+        if (window.myChart) {
+            window.myChart.destroy();
+        }
+        
+        // Safely execute the AI-generated code.
+        // We pass 'ctx' as an argument for the code to use.
+        // The generated code is wrapped in a function and then called.
+        const generatedFunction = new Function('ctx', chartCode);
+        window.myChart = generatedFunction(ctx);
+
 
     } catch (error) {
-        console.error("Error generating Vega-Lite spec:", error);
+        console.error("Error generating Chart.js code:", error);
         showError("Sorry, there was an error creating the graph. The AI may have returned an invalid format. Please try again.");
     } finally {
-        // Reset the button state
         submitGraphBtn.disabled = false;
         submitGraphBtn.textContent = 'Generate Graph';
     }
 });
-
 
 /**
  * Renders a Vega-Lite chart into a specified container.
@@ -5993,12 +6013,19 @@ async function renderVegaLiteChart(containerId, spec) {
         </div>
     </div>
     
-    <!-- This is the modal that will display the final rendered graph -->
     <div class="modal-overlay" id="graphDisplayModal">
         <div class="modal-content" style="max-width: 800px; width: 90%;">
             <span class="close-modal-btn" id="closeGraphDisplayBtn">&times;</span>
             <h2>Generated Graph</h2>
-            <div id="vegaContainer" style="width: 100%; margin-top: 20px;"></div>
+            
+            <div style="position: relative; height:400px; width:100%; margin-top: 20px; margin-bottom: 20px;">
+                <canvas id="chartJsCanvas"></canvas>
+            </div>
+    
+            <details>
+                <summary style="cursor: pointer; font-weight: 500; color: #4b5563;">View Generated Code</summary>
+                <pre style="background: #f3f4f6; border-radius: 8px; padding: 15px; margin-top: 10px; max-height: 200px; overflow-y: auto;"><code id="chartJsCodeBlock" style="font-family: 'Courier New', Courier, monospace; font-size: 14px;"></code></pre>
+            </details>
         </div>
     </div>
     <script src="https://cdn.jsdelivr.net/npm/vega@5"></script>
