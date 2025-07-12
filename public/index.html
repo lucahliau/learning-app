@@ -1443,6 +1443,7 @@
             position: absolute;
             top: 50%;
             left: 0;
+            width: 100%; /* Add this line */
             height: 4px;
             background-color: #e5e7eb;
             transform: translateY(-2px);
@@ -2130,8 +2131,7 @@ function renderHybridTimeline(container, hybridData) {
             seg.pixelStart = currentPixelPos;
             currentPixelPos += seg.pixelWidth;
         });
-        timelineWrapper.style.width = `${containerWidth}px`;
-        timelineLine.style.width = `${containerWidth}px`;
+        
 
 
         // --- BITESIZE STEP 3 & 4: Period & Event Positioning ---
