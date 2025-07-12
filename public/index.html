@@ -1952,7 +1952,7 @@
                             placeholder="Ask about finance or economics..."
                             autofocus
                         >
-                        <button class="send-button" id="sendButton" onclick="sendMessage()">
+                        <button class="send-button" id="sendButton">
                             <span id="buttonText">Send</span>
                             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                                 <path d="M5 12h14m0 0l-6-6m6 6l-6 6"/>
@@ -1998,7 +1998,7 @@ function triggerMathRendering(element) {
         });
     }
 }
-
+document.getElementById('sendButton').addEventListener('click', sendMessage);
 
 // --- ADVANCED DATE PARSING & SCALING (No Changes) ---
 const isLeapYear = (year) => (year % 4 === 0 && year % 100 !== 0) || (year % 400 === 0);
