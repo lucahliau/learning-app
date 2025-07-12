@@ -46,6 +46,17 @@ Here are the available asset types and their required data formats:
     * "type": "pie_chart"
     * "data": (String) A multi-line string with each line in "Label: Percentage" format.`;
 
+const STREAM_JSON_FORMAT_INSTRUCTIONS = `Your response MUST be a single, valid JSON object containing three top-level keys: "definitions", "assets", and "content_stream".
+
+1.  **definitions**: An array of objects for any technical terms, each with a "term" and "definition".
+2.  **assets**: A dictionary object where you will place all visual aids (timelines, graphs, etc.).
+    * Each key in this dictionary must be a unique ID that you create (e.g., "timeline_v1").
+    * The value for each key is the standard visual asset object, with its own "type" and "data".
+3.  **content_stream**: An array of objects that represents the ordered flow of the page content. Each object must have a "type" key.
+    * If "type" is **"paragraph"**, the object must also have a "text" key containing the paragraph's content.
+    * If "type" is **"visual_asset"**, the object must also have an "asset_id" key whose value exactly matches one of the keys in your "assets" dictionary.
+
+Crucially, you must first create the asset in the "assets" dictionary before you can reference its ID in the "content_stream".`;
 
 export function formatVisualAssetsForContext(visualAssets) {
     if (!visualAssets || visualAssets.length === 0) return '';
@@ -113,23 +124,25 @@ export function buildTreeStructureString(node, currentPositionNodeId, indent = '
     return treeString;
 }
 
-export function getInPlaceElaborationPrompt({ topicTitle, sophistication, journeyStructure, lineageContent, currentNodeTitle, existingParagraphs }) {
-    // Note: The 'currentNodeTitle' from the parameters is now passed into the shared context block.
-    const sharedContext = getSharedContextBlock({ topicTitle, sophistication, currentNodeTitle, journeyStructure, lineageContent });
+export function getInPlaceElaborationPrompt({ topicTitle, sophistication, journeyStructure, lineageContent, currentNodeTitle, existingContent }) {
+  const sharedContext = getSharedContextBlock({ topicTitle, sophistication, currentNodeTitle, journeyStructure, lineageContent });
 
-    return `You are an expert curriculum designer providing a hyper-personalized learning experience.
+  // Stringify the existing content object to include it in the prompt for context.
+  const existingContentString = JSON.stringify(existingContent, null, 2);
+
+  return `You are an expert curriculum designer providing a hyper-personalized learning experience.
 
 ${sharedContext}
 
-Here are the existing paragraphs for the current node that the user wants you to elaborate on:
---- EXISTING PARAGRAPHS ---
-${existingParagraphs}
---- END EXISTING PARAGRAPHS ---
+The user is currently viewing the content below and has clicked "Tell me more".
+--- EXISTING CONTENT OBJECT ---
+${existingContentString}
+--- END EXISTING CONTENT OBJECT ---
 
 TASK:
-The user has clicked "Tell me more". Your task is to generate 2-3 new paragraphs of text that follow on naturally from the existing paragraphs, going into more depth. Place this new text in the "explanation" key of the JSON response.
+Your task is to elaborate on the existing content by adding 2-3 new, relevant paragraphs. You MUST return a single, complete JSON object that includes all the original content plus your additions. Your response must follow the specific format instructions below.
 
-${DETAILED_JSON_FORMAT_INSTRUCTIONS}`;
+${STREAM_JSON_FORMAT_INSTRUCTIONS}`;
 }
 
 // Add this entire block to the end of prompt-builder.js

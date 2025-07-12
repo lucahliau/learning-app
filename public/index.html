@@ -4097,135 +4097,145 @@ function updateBreadcrumb() {
         // Render content
        // Render content
        function renderContent(parsedContent, userQuestion = null) {
-            console.log("Step 3: Content received by renderContent:", parsedContent);
-            const mainContent = document.getElementById('mainContent');
-            mainContent.innerHTML = '';
+    const mainContent = document.getElementById('mainContent');
+    mainContent.innerHTML = ''; // Clear previous content
 
-            try {
-                // Render the main text explanation (overview)
-                if (parsedContent.overview) {
-                    const overviewDiv = document.createElement('div');
-                    overviewDiv.className = 'topic-overview';
+    try {
+        // --- NEW HYBRID LOGIC ---
+        if (parsedContent.content_stream && Array.isArray(parsedContent.content_stream)) {
+            // PATH 1: Render content from the new "content_stream" format.
+            
+            parsedContent.content_stream.forEach(block => {
+                if (block.type === 'paragraph') {
+                    // Create a container for the paragraph text
+                    const paragraphContainer = document.createElement('div');
                     
-                    let formattedOverview = parsedContent.overview;
-                    const highlightedOverview = applyTermHighlighting(formattedOverview, parsedContent.definitions);
-                    overviewDiv.innerHTML = `<h2>${toTitleCase(currentTreeNode.fullTitle || currentTreeNode.title)}</h2><div>${highlightedOverview}</div>`;
-                    mainContent.appendChild(overviewDiv);
+                    // Format the raw text into HTML paragraphs and apply highlighting
+                    let html = block.text.replace(/\\n/g, '\n');
+                    const formattedHtml = html
+                        .split(/\n\s*\n/)
+                        .map(p => p.trim())
+                        .filter(p => p)
+                        .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
+                        .join('');
+
+                    paragraphContainer.innerHTML = applyTermHighlighting(formattedHtml, parsedContent.definitions);
+                    mainContent.appendChild(paragraphContainer);
+
+                } else if (block.type === 'visual_asset' && parsedContent.assets && parsedContent.assets[block.asset_id]) {
+                    // Find the asset in the dictionary and render it
+                    const asset = parsedContent.assets[block.asset_id];
+                    const assetContainer = document.createElement('div');
+                    assetContainer.className = 'visual-asset-column';
+                    
+                    const labWrapper = document.createElement('div');
+                    labWrapper.className = 'lab-container';
+                    labWrapper.style.margin = '25px 0';
+                    labWrapper.style.width = '100%';
+
+                    const assetType = asset.type.trim();
+                    if (assetType.includes('hybrid_timeline')) {
+                        renderHybridTimeline(labWrapper, asset.data);
+                    } else if (assetType === 'implicit_plotter') {
+                        renderImplicitPlotter(labWrapper, asset.data);
+                    }
+                    // Add other asset types (bar, pie) here if needed
+                    
+                    assetContainer.appendChild(labWrapper);
+                    mainContent.appendChild(assetContainer);
                 }
+            });
 
-                // --- NEW: VISUAL ASSET DISPATCHER ---
-                if (parsedContent.visualAssets && parsedContent.visualAssets.length > 0) {
-                    parsedContent.visualAssets.forEach(asset => {
-                        // Check if this asset is our new row structure
-                        if (asset.type === 'layout_row' && asset.columns) {
-                            const rowContainer = document.createElement('div');
-                            rowContainer.className = 'visual-asset-row';
+        } else {
+            // PATH 2: Fallback to the old rendering logic for syllabi and card-based views.
 
-                            asset.columns.forEach(columnAsset => {
-                                const columnContainer = document.createElement('div');
-                                columnContainer.className = 'visual-asset-column';
-                                
-                                const assetType = columnAsset.type.trim();
-                                if (assetType === 'implicit_plotter') {
-                                    const labWrapper = document.createElement('div');
-                                    labWrapper.className = 'lab-container';
-                                    labWrapper.style.margin = '0'; 
-                                    labWrapper.style.width = '100%'; 
-                                    renderImplicitPlotter(labWrapper, columnAsset.data);
-                                    columnContainer.appendChild(labWrapper);
+            if (parsedContent.overview) {
+                const overviewDiv = document.createElement('div');
+                overviewDiv.className = 'topic-overview';
+                const highlightedOverview = applyTermHighlighting(parsedContent.overview, parsedContent.definitions);
+                overviewDiv.innerHTML = `<h2>${toTitleCase(currentTreeNode.fullTitle || currentTreeNode.title)}</h2><div>${highlightedOverview}</div>`;
+                mainContent.appendChild(overviewDiv);
+            }
 
-                                } else if (assetType === 'bar_chart' || assetType === 'pie_chart') {
-                                    const chartWrapper = document.createElement('div');
-                                    chartWrapper.className = 'chart-container'; 
-                                    const chartId = 'asset-' + Date.now() + Math.random().toString(36).substring(2, 9);
-                                    chartWrapper.innerHTML = `<canvas id="${chartId}"></canvas>`;
-                                    
-                                    if (assetType === 'bar_chart') {
-                                        chartWrapper.classList.add('bar-chart-container');
-                                        renderBarChart(chartId, columnAsset.data);
-                                    } else {
-                                        chartWrapper.classList.add('pie-chart-container');
-                                        renderPieChart(chartId, null, columnAsset.data);
-                                    }
-                                    columnContainer.appendChild(chartWrapper);
-                                }
-                                rowContainer.appendChild(columnContainer);
-                            });
-                            mainContent.appendChild(rowContainer);
-
-                        } else {
-                            // --- Fallback for old/non-row assets (like timelines) ---
-                            const assetContainer = document.createElement('div');
-                            assetContainer.className = 'lab-container';
-                            assetContainer.style.marginTop = '40px';
-                            
-                            const assetType = asset.type.trim();
-                            if (assetType.includes('hybrid_timeline')) {
-                                renderHybridTimeline(assetContainer, asset.data);
-                            }
-                            mainContent.appendChild(assetContainer);
+            if (parsedContent.visualAssets && parsedContent.visualAssets.length > 0) {
+                // The original logic for rendering assets at the bottom
+                 parsedContent.visualAssets.forEach(asset => {
+                    if (asset.type === 'layout_row' && asset.columns) {
+                        const rowContainer = document.createElement('div');
+                        rowContainer.className = 'visual-asset-row';
+                        asset.columns.forEach(columnAsset => {
+                            const columnContainer = document.createElement('div');
+                            columnContainer.className = 'visual-asset-column';
+                             const labWrapper = document.createElement('div');
+                            labWrapper.className = 'lab-container';
+                             renderImplicitPlotter(labWrapper, columnAsset.data);
+                            columnContainer.appendChild(labWrapper);
+                            rowContainer.appendChild(columnContainer);
+                        });
+                        mainContent.appendChild(rowContainer);
+                    } else {
+                        const assetContainer = document.createElement('div');
+                        assetContainer.className = 'lab-container';
+                        assetContainer.style.marginTop = '40px';
+                        if (asset.type.includes('hybrid_timeline')) {
+                            renderHybridTimeline(assetContainer, asset.data);
                         }
-                    });
-                }
-                
-                // Render the sub-topic cards
-                if (parsedContent.sections && parsedContent.sections.length > 0) {
-                    const cardsGrid = document.createElement('div');
-                    cardsGrid.className = 'cards-grid';
-                    const parentNodeId = currentTreeNode.id;
-
-                    parsedContent.sections.forEach((section, index) => {
-                        if (!section.isExpanded) {
-                            const childNode = currentTreeNode.children.find(child => child.fullTitle === section.title || child.title === section.title);
-                            const isNodeRead = childNode ? childNode.isRead : false;
-                            const childNodeId = childNode ? childNode.id : null;
-                            const card = createCard(section, index, isNodeRead, childNodeId, parentNodeId);
-                            cardsGrid.appendChild(card);
-                        }
-                    });
-                    mainContent.appendChild(cardsGrid);
-                }
-
-                // Render action buttons if applicable
-// Render action buttons if applicable
-if (parsedContent.showTellMeMore) {
-    // Create a wrapper to hold the buttons and space them out
-    const buttonWrapper = document.createElement('div');
-    buttonWrapper.style.display = 'flex';
-    buttonWrapper.style.gap = '15px'; // Adjust spacing between buttons here
-    buttonWrapper.style.marginTop = '20px';
-
-    // 1. Create the "Tell me more" button with its NEW functionality
-    const tellMeMoreBtn = document.createElement('button');
-    tellMeMoreBtn.className = 'tell-me-more-button';
-    tellMeMoreBtn.innerHTML = `Tell me more about this <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14m0 0l-7-7m7 7l7-7"/></svg>`;
-    tellMeMoreBtn.onclick = () => elaborateInPlace(); // <-- UPDATED
-
-    // 2. Create the "Go deeper on this" button with its ORIGINAL functionality
-    const goDeeperBtn = document.createElement('button');
-    goDeeperBtn.className = 'tell-me-more-button'; // Use the same style
-    goDeeperBtn.innerHTML = `Go deeper on this <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="6" rx="1"></rect><path d="M12 8v4"></path><path d="M4 12h16"></path><rect x="2" y="16" width="4" height="4" rx="1"></rect><rect x="10" y="16" width="4" height="4" rx="1"></rect><rect x="18" y="16" width="4" height="4" rx="1"></rect><path d="M4 12v4"></path><path d="M12 12v4"></path><path d="M20 12v4"></path></svg>`;
-    goDeeperBtn.onclick = () => elaborateOnCurrent(); // <-- REMAINS THE SAME
-
-    // Add both buttons to the wrapper
-    buttonWrapper.appendChild(tellMeMoreBtn);
-    buttonWrapper.appendChild(goDeeperBtn);
-// --- Add the following code for the new button ---
-const differenceBtn = document.createElement('button');
-    differenceBtn.className = 'difference-button';
-    differenceBtn.textContent = "What's the difference between tell me more and go deeper?";
-    differenceBtn.onclick = openDifferenceModal; // This will open the new modal
-
-    buttonWrapper.appendChild(differenceBtn);
-    // --- End of new code ---
-    // Add the wrapper to the main content area
-    mainContent.appendChild(buttonWrapper);
-}
-            } finally {
-                // This will now run even if an error occurs while rendering a chart or timeline.
-                triggerMathRendering(mainContent);
+                        mainContent.appendChild(assetContainer);
+                    }
+                });
             }
         }
+
+        // --- COMMON LOGIC FOR BUTTONS AND CARDS ---
+
+        // Render sub-topic cards if they exist
+        if (parsedContent.sections && parsedContent.sections.length > 0) {
+            const cardsGrid = document.createElement('div');
+            cardsGrid.className = 'cards-grid';
+            const parentNodeId = currentTreeNode.id;
+            parsedContent.sections.forEach((section, index) => {
+                const childNode = currentTreeNode.children.find(child => child.fullTitle === section.title);
+                const isNodeRead = childNode ? childNode.isRead : false;
+                const childNodeId = childNode ? childNode.id : null;
+                const card = createCard(section, index, isNodeRead, childNodeId, parentNodeId);
+                cardsGrid.appendChild(card);
+            });
+            mainContent.appendChild(cardsGrid);
+        }
+
+        // Render action buttons if the view is an explanation (i.e., has no cards)
+        const hasNoCards = !parsedContent.sections || parsedContent.sections.length === 0;
+        if (hasNoCards) {
+            const buttonWrapper = document.createElement('div');
+            buttonWrapper.style.display = 'flex';
+            buttonWrapper.style.gap = '15px';
+            buttonWrapper.style.marginTop = '20px';
+
+            const tellMeMoreBtn = document.createElement('button');
+            tellMeMoreBtn.className = 'tell-me-more-button';
+            tellMeMoreBtn.innerHTML = `Tell me more about this <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14m0 0l-7-7m7 7l7-7"/></svg>`;
+            tellMeMoreBtn.onclick = () => elaborateInPlace();
+
+            const goDeeperBtn = document.createElement('button');
+            goDeeperBtn.className = 'tell-me-more-button';
+            goDeeperBtn.innerHTML = `Go deeper on this <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="9" y="2" width="6" height="6" rx="1"></rect><path d="M12 8v4"></path><path d="M4 12h16"></path><rect x="2" y="16" width="4" height="4" rx="1"></rect><rect x="10" y="16" width="4" height="4" rx="1"></rect><rect x="18" y="16" width="4" height="4" rx="1"></rect><path d="M4 12v4"></path><path d="M12 12v4"></path><path d="M20 12v4"></path></svg>`;
+            goDeeperBtn.onclick = () => elaborateOnCurrent();
+
+            const differenceBtn = document.createElement('button');
+            differenceBtn.className = 'difference-button';
+            differenceBtn.textContent = "What's the difference between tell me more and go deeper?";
+            differenceBtn.onclick = openDifferenceModal;
+
+            buttonWrapper.appendChild(tellMeMoreBtn);
+            buttonWrapper.appendChild(goDeeperBtn);
+            buttonWrapper.appendChild(differenceBtn);
+            mainContent.appendChild(buttonWrapper);
+        }
+
+    } finally {
+        triggerMathRendering(mainContent);
+    }
+}
 
 
         // Create card element
@@ -5568,9 +5578,9 @@ function handleTimelineCardClick(clickedItem, allItems) {
  * Elaborates on the current node's content in place, adding new paragraphs
  * and identifying/highlighting new technical terms.
  */
-async function elaborateInPlace() {
+ async function elaborateInPlace() {
     const currentNode = currentTreeNode;
-    if (!currentNode || !currentNode.content || !currentNode.content.overview) {
+    if (!currentNode || !currentNode.content) {
         showError("There is no content here to elaborate on.");
         return;
     }
@@ -5579,22 +5589,16 @@ async function elaborateInPlace() {
 
     try {
         const rootNode = treeStructure;
-        const sophistication = rootNode.sophistication || 'Detailed';
-        const topicTitle = rootNode.fullTitle;
-        const journeyStructure = buildTreeStructureString(rootNode, currentNode.id);
-        const lineageContent = getLineageContent(currentNode);
         
-        const tempDiv = document.createElement('div');
-        tempDiv.innerHTML = currentNode.content.overview;
-        const existingParagraphs = tempDiv.textContent || tempDiv.innerText || "";
-
+        // This now passes the entire existing content object to the prompt,
+        // so the AI knows about the current paragraphs and assets.
         const elaborationPrompt = getInPlaceElaborationPrompt({
             topicTitle: rootNode.fullTitle,
             sophistication: rootNode.sophistication || 'Detailed',
             journeyStructure: buildTreeStructureString(rootNode, currentNode.id),
             lineageContent: getLineageContent(currentNode),
             currentNodeTitle: currentNode.fullTitle,
-            existingParagraphs: (tempDiv.textContent || tempDiv.innerText || "")
+            existingContent: currentNode.content
         });
 
         conversationHistory.push({ role: "user", content: elaborationPrompt });
@@ -5611,50 +5615,11 @@ async function elaborateInPlace() {
         const result = await response.json();
         const botResponseText = result.choices[0].message.content;
         
-        // ... inside elaborateInPlace
-        let structuredResponse;
-        try {
-            // Use the new sanitizer to reliably get the JSON object
-            structuredResponse = sanitizeAndParseJson(botResponseText);
-        } catch (e) {
-            console.error("---!!!--- JSON PARSING FAILED in elaborateInPlace ---!!!---");
-            console.error("The code could not parse the following text:", botResponseText);
-            console.error("The specific error was:", e.message);
-            throw new Error("The AI returned data in a format that could not be read.");
-        }
+        const structuredResponse = sanitizeAndParseJson(botResponseText);
         
-        const newText = structuredResponse.newText || structuredResponse.explanation || "";
-const newDefinitions = structuredResponse.newDefinitions || structuredResponse.definitions || [];
-        const visualAssets = structuredResponse.visualAssets || [];
-
-        if (newDefinitions.length > 0) {
-            currentNode.content.definitions.push(...newDefinitions);
-        }
-
-        if (visualAssets.length > 0) {
-            if (!currentNode.content.visualAssets) {
-                currentNode.content.visualAssets = [];
-            }
-            currentNode.content.visualAssets.push(...visualAssets);
-        }
-        
-        // --- START OF FIX 1 ---
-        // First, normalize any literal '\\n' strings from the AI into actual newline characters.
-        const normalizedNewText = newText.replace(/\\n/g, '\n');
-
-        // Then, process the normalized text to create paragraphs and line breaks.
-        const formattedNewText = normalizedNewText
-            .split(/\n\s*\n/)
-            .map(p => p.trim())
-            .filter(p => p)
-            .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
-            .join('');
-        // --- END OF FIX 1 ---
-
-        const highlightedNewText = applyTermHighlighting(formattedNewText, newDefinitions);
-
-        const separator = '<hr style="border: none; border-top: 1px solid #e5e7eb; margin: 25px 0;">';
-        currentNode.content.overview += separator + highlightedNewText;
+        // This is now much simpler: just replace the old content
+        // with the new, complete content object from the AI.
+        currentNode.content = structuredResponse;
         
         displayContent(currentNode);
         await saveTopicsToFirestore();
