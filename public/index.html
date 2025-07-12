@@ -4098,98 +4098,61 @@ function updateBreadcrumb() {
        // Render content
        function renderContent(parsedContent, userQuestion = null) {
     const mainContent = document.getElementById('mainContent');
-    mainContent.innerHTML = ''; // Clear previous content
+    mainContent.innerHTML = '';
 
     try {
-        // --- NEW HYBRID LOGIC ---
-        if (parsedContent.content_stream && Array.isArray(parsedContent.content_stream)) {
-            // PATH 1: Render content from the new "content_stream" format.
-            
-            parsedContent.content_stream.forEach(block => {
-                if (block.type === 'paragraph') {
-                    // Create a container for the paragraph text
-                    const paragraphContainer = document.createElement('div');
-                    
-                    // Format the raw text into HTML paragraphs and apply highlighting
-                    let html = block.text.replace(/\\n/g, '\n');
-                    const formattedHtml = html
-                        .split(/\n\s*\n/)
-                        .map(p => p.trim())
-                        .filter(p => p)
-                        .map(p => `<p>${p.replace(/\n/g, '<br>')}</p>`)
-                        .join('');
-
-                    paragraphContainer.innerHTML = applyTermHighlighting(formattedHtml, parsedContent.definitions);
-                    mainContent.appendChild(paragraphContainer);
-
-                } else if (block.type === 'visual_asset' && parsedContent.assets && parsedContent.assets[block.asset_id]) {
-                    // Find the asset in the dictionary and render it
-                    const asset = parsedContent.assets[block.asset_id];
-                    const assetContainer = document.createElement('div');
-                    assetContainer.className = 'visual-asset-column';
-                    
-                    const labWrapper = document.createElement('div');
-                    labWrapper.className = 'lab-container';
-                    labWrapper.style.margin = '25px 0';
-                    labWrapper.style.width = '100%';
-
-                    const assetType = asset.type.trim();
-                    if (assetType.includes('hybrid_timeline')) {
-                        renderHybridTimeline(labWrapper, asset.data);
-                    } else if (assetType === 'implicit_plotter') {
-                        renderImplicitPlotter(labWrapper, asset.data);
-                    }
-                    // Add other asset types (bar, pie) here if needed
-                    
-                    assetContainer.appendChild(labWrapper);
-                    mainContent.appendChild(assetContainer);
-                }
-            });
-
-        } else {
-            // PATH 2: Fallback to the old rendering logic for syllabi and card-based views.
-
-            if (parsedContent.overview) {
-                const overviewDiv = document.createElement('div');
-                overviewDiv.className = 'topic-overview';
-                const highlightedOverview = applyTermHighlighting(parsedContent.overview, parsedContent.definitions);
-                overviewDiv.innerHTML = `<h2>${toTitleCase(currentTreeNode.fullTitle || currentTreeNode.title)}</h2><div>${highlightedOverview}</div>`;
-                mainContent.appendChild(overviewDiv);
-            }
-
-            if (parsedContent.visualAssets && parsedContent.visualAssets.length > 0) {
-                // The original logic for rendering assets at the bottom
-                 parsedContent.visualAssets.forEach(asset => {
-                    if (asset.type === 'layout_row' && asset.columns) {
-                        const rowContainer = document.createElement('div');
-                        rowContainer.className = 'visual-asset-row';
-                        asset.columns.forEach(columnAsset => {
-                            const columnContainer = document.createElement('div');
-                            columnContainer.className = 'visual-asset-column';
-                             const labWrapper = document.createElement('div');
-                            labWrapper.className = 'lab-container';
-                             renderImplicitPlotter(labWrapper, columnAsset.data);
-                            columnContainer.appendChild(labWrapper);
-                            rowContainer.appendChild(columnContainer);
-                        });
-                        mainContent.appendChild(rowContainer);
-                    } else {
-                        const assetContainer = document.createElement('div');
-                        assetContainer.className = 'lab-container';
-                        assetContainer.style.marginTop = '40px';
-                        if (asset.type.includes('hybrid_timeline')) {
-                            renderHybridTimeline(assetContainer, asset.data);
-                        }
-                        mainContent.appendChild(assetContainer);
-                    }
-                });
-            }
+        // This part handles old content that you might have saved.
+        // It converts the old "overview" format to the new "bubbles" format on the fly.
+        if (parsedContent.overview && !parsedContent.bubbles) {
+            parsedContent.bubbles = [{
+                text: parsedContent.overview,
+                visualAssets: parsedContent.visualAssets || []
+            }];
+            delete parsedContent.overview;
+            delete parsedContent.visualAssets;
         }
 
-        // --- COMMON LOGIC FOR BUTTONS AND CARDS ---
+        // Always render the main title for the topic.
+        const titleDiv = document.createElement('div');
+        titleDiv.className = 'topic-overview';
+        const highlightedTitle = applyTermHighlighting(`<h2>${toTitleCase(currentTreeNode.fullTitle || currentTreeNode.title)}</h2>`, parsedContent.definitions);
+        titleDiv.innerHTML = highlightedTitle;
+        mainContent.appendChild(titleDiv);
 
-        // Render sub-topic cards if they exist
-        if (parsedContent.sections && parsedContent.sections.length > 0) {
+        if (parsedContent.bubbles) {
+            // --- Path 1: Render the "bubbles" ---
+            parsedContent.bubbles.forEach((bubble, index) => {
+                if (index > 0) {
+                    const separator = document.createElement('hr');
+                    separator.style.cssText = "border: none; border-top: 1px solid #e5e7eb; margin: 35px 0;";
+                    mainContent.appendChild(separator);
+                }
+
+                const bubbleContainer = document.createElement('div');
+                
+                if (bubble.text) {
+                    const highlightedText = applyTermHighlighting(bubble.text, parsedContent.definitions);
+                    bubbleContainer.innerHTML += `<div>${highlightedText}</div>`;
+                }
+                
+                if (bubble.visualAssets && bubble.visualAssets.length > 0) {
+                    bubble.visualAssets.forEach(asset => {
+                        const assetContainer = document.createElement('div');
+                        assetContainer.className = 'lab-container';
+                        assetContainer.style.marginTop = '25px';
+                        if (asset.type.includes('hybrid_timeline')) {
+                            renderHybridTimeline(assetContainer, asset.data);
+                        } else if (asset.type === 'implicit_plotter') {
+                            renderImplicitPlotter(assetContainer, asset.data);
+                        }
+                        bubbleContainer.appendChild(assetContainer);
+                    });
+                }
+                mainContent.appendChild(bubbleContainer);
+            });
+
+        } else if (parsedContent.sections) {
+            // --- Path 2: Render the card-based syllabus view ---
             const cardsGrid = document.createElement('div');
             cardsGrid.className = 'cards-grid';
             const parentNodeId = currentTreeNode.id;
@@ -4203,9 +4166,8 @@ function updateBreadcrumb() {
             mainContent.appendChild(cardsGrid);
         }
 
-        // Render action buttons if the view is an explanation (i.e., has no cards)
-        const hasNoCards = !parsedContent.sections || parsedContent.sections.length === 0;
-        if (hasNoCards) {
+        // --- Render action buttons only for bubble views ---
+        if (parsedContent.bubbles) {
             const buttonWrapper = document.createElement('div');
             buttonWrapper.style.display = 'flex';
             buttonWrapper.style.gap = '15px';
@@ -4231,7 +4193,6 @@ function updateBreadcrumb() {
             buttonWrapper.appendChild(differenceBtn);
             mainContent.appendChild(buttonWrapper);
         }
-
     } finally {
         triggerMathRendering(mainContent);
     }
@@ -4342,7 +4303,6 @@ async function elaborateOnCurrent() {
     let elaborationPrompt = '';
 
     if (generateNewCards) {
-        // This part for handling new questions remains the same.
         const parentOfQuestion = targetNode.parent;
         elaborationPrompt = getNewSubtopicsPrompt({
             topicTitle: rootNode.fullTitle,
@@ -4354,12 +4314,8 @@ async function elaborateOnCurrent() {
         });
 
     } else {
-        // --- THIS IS THE UPDATED BLOCK ---
-        // This path is for expanding a standard topic card.
         const topicCategory = rootNode.category;
         const isStemTopic = topicCategory === 'Science' || topicCategory === 'Mathematics';
-        
-        // This is the object containing all the context details.
         const promptParams = {
             topicTitle: rootNode.fullTitle,
             sophistication: rootNode.sophistication || 'Detailed',
@@ -4371,7 +4327,6 @@ async function elaborateOnCurrent() {
         if (isStemTopic) {
             elaborationPrompt = getStemElaborationPrompt(promptParams);
         } else {
-            // Add the simple context prompt for non-STEM topics
             promptParams.contextPrompt = (targetNode.parent && targetNode.parent.id !== 'root')
                 ? `In the context of "${targetNode.parent.fullTitle}", `
                 : '';
@@ -4381,7 +4336,6 @@ async function elaborateOnCurrent() {
 
     showLoading(true);
 
-    // The rest of the function (API call, response handling) remains the same.
     try {
         conversationHistory.push({ role: "user", content: elaborationPrompt });
         pruneConversationHistory();
@@ -4398,32 +4352,42 @@ async function elaborateOnCurrent() {
         const botResponse = data.choices[0].message.content;
         conversationHistory.push({ role: "assistant", content: botResponse });
 
-        let parsed;
+        let finalContentObject;
         if (generateNewCards) {
-            parsed = { overview: `Here are some deeper areas to explore.`, sections: universalParseSyllabus(botResponse), definitions: [] };
+            // This path for "Go Deeper" remains unchanged, as it uses cards.
+            finalContentObject = { 
+                overview: `Here are some deeper areas to explore.`, 
+                sections: universalParseSyllabus(botResponse), 
+                definitions: [] 
+            };
             targetNode.children = [];
-            parsed.sections.forEach(section => {
+            finalContentObject.sections.forEach(section => {
                 createTreeNode(section.title, null, targetNode, false);
             });
             targetNode.children.forEach(childNode => {
                 prefetchNodeContent(childNode);
             });
         } else {
-            try {
-                const structuredResponse = sanitizeAndParseJson(botResponse);
-                const explanation = structuredResponse.explanation || "No explanation provided.";
-                const definitions = structuredResponse.definitions || [];
-                const visualAssets = structuredResponse.visualAssets || [];
-                parsed = parseResponse(explanation, definitions);
-                parsed.visualAssets = visualAssets;
-                parsed.showTellMeMore = true;
-            } catch (e) {
-                console.error("Failed to parse structured response from AI:", e);
-                parsed = parseResponse(botResponse, []);
-            }
+            // This path for standard explanations now creates the "bubbles" structure.
+            const structuredResponse = sanitizeAndParseJson(botResponse);
+            const explanation = structuredResponse.explanation || "No explanation provided.";
+            const definitions = structuredResponse.definitions || [];
+            const visualAssets = structuredResponse.visualAssets || [];
+            
+            const parsedText = parseResponse(explanation, []);
+
+            finalContentObject = {
+                definitions: definitions,
+                bubbles: [
+                    {
+                        text: parsedText.overview,
+                        visualAssets: visualAssets
+                    }
+                ]
+            };
         }
 
-        targetNode.content = parsed;
+        targetNode.content = finalContentObject;
         navigateToNode(targetNode.id);
         await saveTopicsToFirestore();
         return true;
@@ -5580,7 +5544,7 @@ function handleTimelineCardClick(clickedItem, allItems) {
  */
  async function elaborateInPlace() {
     const currentNode = currentTreeNode;
-    if (!currentNode || !currentNode.content) {
+    if (!currentNode || !currentNode.content || !currentNode.content.bubbles) {
         showError("There is no content here to elaborate on.");
         return;
     }
@@ -5590,15 +5554,19 @@ function handleTimelineCardClick(clickedItem, allItems) {
     try {
         const rootNode = treeStructure;
         
-        // This now passes the entire existing content object to the prompt,
-        // so the AI knows about the current paragraphs and assets.
+        // Provide the text from the last bubble as context for the AI.
+        const lastBubble = currentNode.content.bubbles[currentNode.content.bubbles.length - 1];
+        const tempDiv = document.createElement('div');
+        tempDiv.innerHTML = lastBubble.text;
+        const existingParagraphs = tempDiv.textContent || tempDiv.innerText || "";
+
         const elaborationPrompt = getInPlaceElaborationPrompt({
             topicTitle: rootNode.fullTitle,
             sophistication: rootNode.sophistication || 'Detailed',
             journeyStructure: buildTreeStructureString(rootNode, currentNode.id),
             lineageContent: getLineageContent(currentNode),
             currentNodeTitle: currentNode.fullTitle,
-            existingContent: currentNode.content
+            existingParagraphs: existingParagraphs
         });
 
         conversationHistory.push({ role: "user", content: elaborationPrompt });
@@ -5614,12 +5582,28 @@ function handleTimelineCardClick(clickedItem, allItems) {
 
         const result = await response.json();
         const botResponseText = result.choices[0].message.content;
-        
         const structuredResponse = sanitizeAndParseJson(botResponseText);
         
-        // This is now much simpler: just replace the old content
-        // with the new, complete content object from the AI.
-        currentNode.content = structuredResponse;
+        const newText = structuredResponse.explanation || "";
+        const newDefinitions = structuredResponse.definitions || [];
+        const newVisualAssets = structuredResponse.visualAssets || [];
+
+        // Merge any new definitions into the main list for the topic.
+        if (newDefinitions.length > 0) {
+            currentNode.content.definitions.push(...newDefinitions);
+        }
+        
+        // Format the new text into clean HTML.
+        const parsedText = parseResponse(newText, []);
+
+        // Create the new bubble object.
+        const newBubble = {
+            text: parsedText.overview,
+            visualAssets: newVisualAssets
+        };
+
+        // Add the new bubble to the array.
+        currentNode.content.bubbles.push(newBubble);
         
         displayContent(currentNode);
         await saveTopicsToFirestore();
