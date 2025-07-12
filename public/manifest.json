@@ -1,0 +1,21 @@
+{
+    "name": "Mobile Learning App",
+    "short_name": "Learn",
+    "start_url": ".",
+    "display": "standalone",
+    "background_color": "#f9fafb",
+    "theme_color": "#191970",
+    "description": "Your interactive learning journey on the go.",
+    "icons": [
+      {
+        "src": "/icons/icon-192x192.png",
+        "type": "image/png",
+        "sizes": "192x192"
+      },
+      {
+        "src": "/icons/icon-512x512.png",
+        "type": "image/png",
+        "sizes": "512x512"
+      }
+    ]
+  }
