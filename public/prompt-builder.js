@@ -1,6 +1,14 @@
+const SOPHISTICATION_LEVELS = {
+  simple: "as a straightforward explanation that doesn't unnecessarily complicate things or use esoteric language",
+  detailed: 'for a final year university undergraduate from a top university like Yale or Oxford trying to improve their writing',
+  expert: 'for a post-graduate expert in the field'
+};
+
 function getSharedContextBlock({ topicTitle, sophistication, currentNodeTitle, journeyStructure, lineageContent }) {
+  const sophisticationDescription = SOPHISTICATION_LEVELS[sophistication] || `a "${sophistication}" level`;
+
     return `CONTEXT:
-The user is learning about the topic of "${topicTitle}" at a "${sophistication}" level. They are currently at the node titled "${currentNodeTitle}".
+The user is learning about the topic of "${topicTitle}" at a sophistication level appropriate ${sophisticationDescription}. They are currently at the node titled "${currentNodeTitle}".
 
 Here is the user's complete learning journey so far:
 --- JOURNEY MAP ---
@@ -16,7 +24,7 @@ ${lineageContent}
 const DETAILED_JSON_FORMAT_INSTRUCTIONS = `Your response MUST be a single, valid JSON object with no other text before or after it.Do NOT use unescaped newline characters.
 The JSON object must have three keys: "explanation", "definitions", and an optional "visualAssets".
 
-1.  In the "explanation" value, provide a detailed, non-generic explanation of the topic with at least 2 paragraphs. **For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters. Use $ for inline math (e.g., Let $x$ be a variable) and $$ for display math (e.g., $$E = mc^2$$).**
+1.  In the "explanation" value, provide a detailed, non-generic explanation of the topic with at least 2 paragraphs.   **For any mathematical equations or variables, you MUST enclose them in LaTeX delimiters. Use $ for inline math (e.g., Let $x$ be a variable) and $$ for display math (e.g., $$E = mc^2$$).**
 2.  In the "definitions" value, provide an array of objects. For each object, identify a technical term from your explanation and provide a simple, one-sentence definition for it in the context of the topic. Only add/define these technical terms if they are truly technical and not straightforward, and their definition is specific to the context. Terms like focus, endurance, mental toughness which are not included.
 3.  In the "visualAssets" value, (this key is optional), analyze your explanation. If a visual aid would enhance understanding, add this key. If not, OMIT this key entirely. Do NOT add a timeline unless it really does significant enhance learning of the topic. If you include a visual reference (timeline or graph equation) feel free to refer in your "explanation" content directly to them. Do not add a timeline if it isn't really helpful and really makes sense to have it there. 
     * If included, it must be an array of objects. Each object represents one visual asset.
