@@ -5623,8 +5623,8 @@ async function elaborateInPlace() {
             throw new Error("The AI returned data in a format that could not be read.");
         }
         
-        const newText = structuredResponse.newText || "";
-        const newDefinitions = structuredResponse.newDefinitions || [];
+        const newText = structuredResponse.newText || structuredResponse.explanation || "";
+const newDefinitions = structuredResponse.newDefinitions || structuredResponse.definitions || [];
         const visualAssets = structuredResponse.visualAssets || [];
 
         if (newDefinitions.length > 0) {
