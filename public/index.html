@@ -3964,6 +3964,7 @@ async function navigateToNode(nodeId) {
 
     updateNavigation();
     displayContent(node); // Display content (or lack thereof)
+    document.getElementById('mainContent').scrollTop = 0;
     updateTreeVisualization(); // Update the tree to show the active node
     saveTopicsToFirestore();
 }
